@@ -1,0 +1,31 @@
+[project]
+name = "ember"
+version = "0.0.0"
+description = ""
+
+requires-python = "~=3.8"
+dependencies = [
+	"amaranth[builtin-yosys]@git+https://github.com/amaranth-lang/amaranth",
+	"amaranth-soc@git+https://github.com/amaranth-lang/amaranth-soc",
+]
+
+[tool.pdm.build]
+includes = ["ember/"]
+
+[tool.pdm.dev-dependencies]
+docs = [
+	"sphinx~=7.1",
+	"sphinx-rtd-theme~=2.0",
+	"sphinx-autobuild",
+]
+
+[tool.pdm.scripts]
+test.composite = ["test-code"]
+test-code.cmd = "python -m unittest discover -t . -s tests -v"
+emit-verilog.cmd = "python -c 'print(\"[!] Unimplemented\")'"
+
+docs.cmd = "sphinx-build docs/ docs/build -W --keep-going"
+docs-live.cmd = "sphinx-autobuild docs/ docs/build --watch ember"
+
+#sim = { call = "ember:sim()" }
+#build_core_harness = { call = "ember.harness:build_core_harness()" }
