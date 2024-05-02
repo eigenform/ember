@@ -187,19 +187,15 @@ class FetchUnit(Component):
         #        ),
         #    ]
 
-        way_match_encoder = PriorityEncoder(exact_log2(self.p.l1i.num_ways))
+        m.submodules.way_match_encoder = way_match_encoder = \
+                PriorityEncoder(exact_log2(self.p.l1i.num_ways))
         way_match_hit  = (~way_match_encoder.n & self.req.valid)
         way_match_idx  = way_match_encoder.o
         way_match_data = Mux(way_match_hit, l1_line_data[way_match_idx], 0)
-
         m.d.comb += [
             way_match_encoder.i.eq(Cat(*way_match_arr)),
         ]
         
-
-
-
-
         ## Output to ibus interface
         #fill_adr = Signal(self.p.xlen - 2)
         #m.d.comb += [

@@ -1,6 +1,7 @@
 import unittest
 from ember.param import *
 from ember.riscv.encoding import *
+from ember.riscv.inst import *
 from ember.sim.common import Testbench
 
 from amaranth import *
@@ -53,6 +54,9 @@ def add_layout_case(m: Module, bits, fmt, opcode,
 
 
 class RvEncodingUnitTests(unittest.TestCase):
+    def test_group_sort_by_specificity(self):
+        for (name, member) in RV32I_BASE_SET.members_by_specificity():
+            print(name, str(member.match()))
 
     def test_enc_layout(self):
         m = Module()
@@ -87,6 +91,10 @@ class RvEncodingUnitTests(unittest.TestCase):
         # 804ff06f: jal x0,-0xffc
         add_layout_case(m, 0x804f_f06f, RvFormat.J, RvOpcode.JAL,
             rd=0, imm=-0xffc)
+
+        # 00000013: nop (addi x0,x0,0)
+        add_layout_case(m, 0x0000_0013, RvFormat.R, RvOpcode.OPIMM,
+            rd=0, rs1=0, imm=0)
 
         sim = Simulator(m)
         sim.run()
