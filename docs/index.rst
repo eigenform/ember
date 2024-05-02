@@ -3,17 +3,28 @@ Ember
 
 It's a computer.
 
-.. warning::
-   what is this i dont even
-
-
+------
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Table of Contents
+   :caption: Build Process
+   :titlesonly:
 
    usage
-   design
-   modules
+
+.. toctree::
+   :caption: Core Configuration
+   :titlesonly:
+
+   config/param
+   config/isa
+
+.. toctree::
+   :caption: Module-level Reference
+   :titlesonly:
+
+   modules/l1i
+   modules/itlb
+   modules/fetch
+   modules/decode
 
 
