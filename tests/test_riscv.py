@@ -54,11 +54,7 @@ def add_layout_case(m: Module, bits, fmt, opcode,
 
 
 class RvEncodingUnitTests(unittest.TestCase):
-    def test_group_sort_by_specificity(self):
-        for (name, member) in RV32I_BASE_SET.members_by_specificity():
-            print(name, str(member.match()))
-
-    def test_enc_layout(self):
+    def test_enc_layout_simple(self):
         m = Module()
         # 00008133: add x2,x1,x0
         add_layout_case(m, 0x0000_8133, RvFormat.R, RvOpcode.OP,

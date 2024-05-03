@@ -31,14 +31,13 @@ class RvInstMatch(object):
 
 class RvInst(object):
     """ Definition of a RISC-V instruction. """
-    def __init__(self, name, fmt: RvFormat, 
+    def __init__(self, fmt: RvFormat, 
                  opcode: RvOpcode, 
                  f3=None, f7=None, f12=None, rd=None, rs1=None):
 
         if f7 != None and f12 != None:
             raise ValueError("wuhhhhhhhh")
 
-        self.name = name
         self.fmt = fmt
         self.constraints = {}
         self.constraints['opcode_low'] = 0b11
@@ -78,22 +77,49 @@ class RvInst(object):
 
 class RvInstGroup(object):
     """ A group of supported RISC-V instructions. """
-    def __init__(self, name="", members={}):
-        self.name = name
+    def __init__(self, enum_name="RvInstId", members={}):
         self.members = members
+
+        # Generate an Enum type for all instructions within this group. 
+        # The values are defined by the order of 'self.members'.
+        self.enum_name = enum_name
+        self.enum_ids = {}
+        for idx, name in enumerate(self.members):
+            self.enum_ids[name] = idx
+        #self.enum_type = Enum(enum_name, [op for op in self.members],start=0)
+        self.enum_type = Enum(self.enum_name, self.enum_ids, start=0)
+
+    def as_enum(self):
+        """ Return the Enum type for this group. """
+        return self.enum_type
+
+    def get_inst_by_name(self, mnemonic: str):
+        """ Return the RvInst for the given mnemonic. """
+        return self.members[mnemonic]
+
+    def get_inst_id_by_name(self, mnemonic: str):
+        """ Return the RvInstId value for the given mnemonic. """
+        return self.enum_ids[mnemonic]
 
     def add_group(self, other):
         """ Append another group to this group. """
         assert isinstance(other, RvInstGroup)
         self.members.update(other.members)
+        self.enum_ids = {}
+        for idx, name in enumerate(self.members):
+            self.enum_ids[name] = idx
+        self.enum_type = Enum(self.enum_name, self.enum_ids, start=0)
 
-    def enum_type(self, enum_name="RvInstId"):
-        """ Construct an Enum type containing all instructions in this group. 
-        """
-        return Enum(enum_name, [ op for op in self.members ],start=0)
+    def items(self):
+        """ Return tuples representing items in this group. """
+        return self.members.items()
 
-    def members_by_specificity(self):
-        return sorted(self.members.items(), key=lambda x: x[1].specificity())
+    def items_by_specificity(self):
+        """ Return a list of members sorted by mask specificity. """
+        return sorted(self.members.items(), 
+            key=lambda x: x[1].specificity(),
+            reverse=True,
+        )
 
     def id_shape(self):
         return unsigned(ceil_log2((len(self.members))))
@@ -101,86 +127,86 @@ class RvInstGroup(object):
         return unsigned(len(self.members))
 
 RV32I_PSEUDO = RvInstGroup(members={
-    "NOP": RvInst("NOP", RvFormat.I, RvOpcode.OPIMM, 
-                  f3=F3OpImm.ADDI, rd=0,rs1=0,f12=0),
+    "NOP": RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.ADDI, rd=0,rs1=0,f12=0),
 })
 
 
 RV32I_BASE_SET = RvInstGroup(members={
-    "AUIPC": RvInst("AUIPC", RvFormat.U, RvOpcode.AUIPC),
-    "LUI":  RvInst("LUI", RvFormat.U, RvOpcode.LUI),
+    "AUIPC":  RvInst(RvFormat.U, RvOpcode.AUIPC),
+    "LUI":    RvInst(RvFormat.U, RvOpcode.LUI),
 
-    "JAL":  RvInst("JAL", RvFormat.J, RvOpcode.JAL),
-    "JALR": RvInst("JALR", RvFormat.I, RvOpcode.JALR, f3=0b000),
+    "JAL":    RvInst(RvFormat.J, RvOpcode.JAL),
+    "JALR":   RvInst(RvFormat.I, RvOpcode.JALR, f3=0b000),
 
-    "BEQ":  RvInst("BEQ", RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BEQ),
-    "BNE":  RvInst("BNE", RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BNE),
-    "BLT":  RvInst("BLT", RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BLT),
-    "BGE":  RvInst("BGE", RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BGE),
-    "BLTU": RvInst("BLTU", RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BLTU),
-    "BGEU": RvInst("BGEU", RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BGEU),
+    "BEQ":    RvInst(RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BEQ),
+    "BNE":    RvInst(RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BNE),
+    "BLT":    RvInst(RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BLT),
+    "BGE":    RvInst(RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BGE),
+    "BLTU":   RvInst(RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BLTU),
+    "BGEU":   RvInst(RvFormat.B, RvOpcode.BRANCH, f3=F3Branch.BGEU),
 
-    "LB":   RvInst("LB", RvFormat.I, RvOpcode.LOAD, f3=F3Ldst.B),
-    "LH":   RvInst("LH", RvFormat.I, RvOpcode.LOAD, f3=F3Ldst.H),
-    "LW":   RvInst("LW", RvFormat.I, RvOpcode.LOAD, f3=F3Ldst.W),
-    "LBU":  RvInst("LBU", RvFormat.I, RvOpcode.LOAD, f3=F3Ldst.BU),
-    "LHU":  RvInst("LHU", RvFormat.I, RvOpcode.LOAD, f3=F3Ldst.HU),
+    "LB":     RvInst(RvFormat.I, RvOpcode.LOAD, f3=F3Ldst.B),
+    "LH":     RvInst(RvFormat.I, RvOpcode.LOAD, f3=F3Ldst.H),
+    "LW":     RvInst(RvFormat.I, RvOpcode.LOAD, f3=F3Ldst.W),
+    "LBU":    RvInst(RvFormat.I, RvOpcode.LOAD, f3=F3Ldst.BU),
+    "LHU":    RvInst(RvFormat.I, RvOpcode.LOAD, f3=F3Ldst.HU),
 
-    "SB":   RvInst("SB", RvFormat.S, RvOpcode.STORE, f3=F3Ldst.B),
-    "SH":   RvInst("SH", RvFormat.S, RvOpcode.STORE, f3=F3Ldst.H),
-    "SW":   RvInst("SW", RvFormat.S, RvOpcode.STORE, f3=F3Ldst.W),
+    "SB":     RvInst(RvFormat.S, RvOpcode.STORE, f3=F3Ldst.B),
+    "SH":     RvInst(RvFormat.S, RvOpcode.STORE, f3=F3Ldst.H),
+    "SW":     RvInst(RvFormat.S, RvOpcode.STORE, f3=F3Ldst.W),
 
-    "ADDI":  RvInst("ADDI", RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.ADDI),
-    "SLTI":  RvInst("SLTI", RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.SLTI),
-    "SLTIU": RvInst("SLTIU", RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.SLTIU),
-    "XORI":  RvInst("XORI", RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.XORI),
-    "ORI":   RvInst("ORI", RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.ORI),
-    "ANDI":  RvInst("ANDI", RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.ANDI),
+    "ADDI":   RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.ADDI),
+    "SLTI":   RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.SLTI),
+    "SLTIU":  RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.SLTIU),
+    "XORI":   RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.XORI),
+    "ORI":    RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.ORI),
+    "ANDI":   RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.ANDI),
 
-    "SLLI":  RvInst("SLLI", RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.SLLI, f7=0b0000000),
-    "SRLI":  RvInst("SRLI", RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.SRLI, f7=0b0000000),
-    "SRAI":  RvInst("SRAI", RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.SRAI, f7=0b0100000),
+    "SLLI":   RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.SLLI, f7=0b0000000),
+    "SRLI":   RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.SRLI, f7=0b0000000),
+    "SRAI":   RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.SRAI, f7=0b0100000),
 
-    "ADD":  RvInst("ADD", RvFormat.R, RvOpcode.OP, f3=F3Op.ADD, f7=0b0000000),
-    "SUB":  RvInst("SUB", RvFormat.R, RvOpcode.OP, f3=F3Op.SUB, f7=0b0100000),
-    "SLL":  RvInst("SLL", RvFormat.R, RvOpcode.OP, f3=F3Op.SLL, f7=0b0000000),
-    "SLT":  RvInst("SLT", RvFormat.R, RvOpcode.OP, f3=F3Op.SLT, f7=0b0000000),
-    "SLTU": RvInst("SLTU", RvFormat.R, RvOpcode.OP, f3=F3Op.SLTU, f7=0b0000000),
-    "XOR":  RvInst("XOR", RvFormat.R, RvOpcode.OP, f3=F3Op.XOR, f7=0b0000000),
-    "SRL":  RvInst("SRL", RvFormat.R, RvOpcode.OP, f3=F3Op.SR, f7=0b0000000),
-    "SRA":  RvInst("SRA", RvFormat.R, RvOpcode.OP, f3=F3Op.SR, f7=0b0100000),
-    "OR":   RvInst("OR", RvFormat.R, RvOpcode.OP, f3=F3Op.OR, f7=0b0000000),
-    "AND":  RvInst("AND", RvFormat.R, RvOpcode.OP, f3=F3Op.AND, f7=0b0000000),
+    "ADD":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.ADD,  f7=0b0000000),
+    "SUB":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.SUB,  f7=0b0100000),
+    "SLL":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.SLL,  f7=0b0000000),
+    "SLT":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.SLT,  f7=0b0000000),
+    "SLTU":   RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.SLTU, f7=0b0000000),
+    "XOR":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.XOR,  f7=0b0000000),
+    "SRL":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.SR,   f7=0b0000000),
+    "SRA":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.SR,   f7=0b0100000),
+    "OR":     RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.OR,   f7=0b0000000),
+    "AND":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.AND,  f7=0b0000000),
 
-    "FENCE":  RvInst("FENCE", RvFormat.I, RvOpcode.MISCMEM, f3=0b000),
-    "ECALL":  RvInst("ECALL", RvFormat.I, RvOpcode.SYSTEM, 
-                     f3=0b000, rd=0b00000, rs1=0b00000, f12=0b0000_0000_0000),
-    "EBREAK": RvInst("EBREAK", RvFormat.I, RvOpcode.SYSTEM, 
-                      f3=0b000, rd=0b00000, rs1=0b00000, f12=0b0000_0000_0001),
+    "FENCE":  RvInst(RvFormat.I, RvOpcode.MISCMEM, f3=0b000),
+
+    "ECALL":  RvInst(RvFormat.I, RvOpcode.SYSTEM,  f3=0b000, 
+                     rd=0b00000, rs1=0b00000, f12=0b0000_0000_0000),
+    "EBREAK": RvInst(RvFormat.I, RvOpcode.SYSTEM,  f3=0b000,
+                     rd=0b00000, rs1=0b00000, f12=0b0000_0000_0001),
 })
 
 ZIFENCEI_SET = RvInstGroup(members={
-    "FENCE.I": RvInst("FENCE.I", RvFormat.I, RvOpcode.MISCMEM, f3=0b001)
+    "FENCE.I": RvInst( RvFormat.I, RvOpcode.MISCMEM, f3=0b001)
 })
 
 ZICSR_SET = RvInstGroup(members={
-    "CSRRW":  RvInst("CSRRW", RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRW),
-    "CSRRS":  RvInst("CSRRS", RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRS),
-    "CSRRC":  RvInst("CSRRC", RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRC),
-    "CSRRWI": RvInst("CSRRWI", RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRWI),
-    "CSRRSI": RvInst("CSRRSI", RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRSI),
-    "CSRRCI": RvInst("CSRRCI", RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRCI),
+    "CSRRW":  RvInst(RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRW),
+    "CSRRS":  RvInst(RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRS),
+    "CSRRC":  RvInst(RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRC),
+    "CSRRWI": RvInst(RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRWI),
+    "CSRRSI": RvInst(RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRSI),
+    "CSRRCI": RvInst(RvFormat.I, RvOpcode.SYSTEM, f3=F3Zicsr.CSRRCI),
 })
 
 RV32M_SET = RvInstGroup(members={
-    "MUL":    RvInst("MUL", RvFormat.R, RvOpcode.OP, f3=F3Mul.MUL, f7=0b0000001),
-    "MULH":   RvInst("MULH", RvFormat.R, RvOpcode.OP, f3=F3Mul.MULH, f7=0b0000001),
-    "MULHSU": RvInst("MULHSU", RvFormat.R, RvOpcode.OP, f3=F3Mul.MULHSU, f7=0b0000001),
-    "MULHU":  RvInst("MULHU", RvFormat.R, RvOpcode.OP, f3=F3Mul.MULHU, f7=0b0000001),
-    "DIV":    RvInst("DIV", RvFormat.R, RvOpcode.OP, f3=F3Mul.DIV, f7=0b0000001),
-    "DIVU":   RvInst("DIVU", RvFormat.R, RvOpcode.OP, f3=F3Mul.DIVU, f7=0b0000001),
-    "REM":    RvInst("REM", RvFormat.R, RvOpcode.OP, f3=F3Mul.REM, f7=0b0000001),
-    "REMU":   RvInst("REMU", RvFormat.R, RvOpcode.OP, f3=F3Mul.REMU, f7=0b0000001),
+    "MUL":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Mul.MUL,    f7=0b0000001),
+    "MULH":   RvInst(RvFormat.R, RvOpcode.OP, f3=F3Mul.MULH,   f7=0b0000001),
+    "MULHSU": RvInst(RvFormat.R, RvOpcode.OP, f3=F3Mul.MULHSU, f7=0b0000001),
+    "MULHU":  RvInst(RvFormat.R, RvOpcode.OP, f3=F3Mul.MULHU,  f7=0b0000001),
+    "DIV":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Mul.DIV,    f7=0b0000001),
+    "DIVU":   RvInst(RvFormat.R, RvOpcode.OP, f3=F3Mul.DIVU,   f7=0b0000001),
+    "REM":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Mul.REM,    f7=0b0000001),
+    "REMU":   RvInst(RvFormat.R, RvOpcode.OP, f3=F3Mul.REMU,   f7=0b0000001),
 })
 
 

@@ -137,6 +137,9 @@ class F3Mul(Enum, shape=unsigned(3)):
 
 class RvEncoding(FlexibleLayout):
     """ Layout associated with a RISC-V instruction encoding. 
+
+    This layout is intended to expose all fields that might be relevant 
+    to decoding a RISC-V instruction. 
     """
     def __init__(self):
         super().__init__(32, {

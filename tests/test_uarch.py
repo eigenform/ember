@@ -11,9 +11,7 @@ from amaranth.lib.enum import *
 from amaranth.back import verilog, rtlil
 
 class RvEncodingUnitTests(unittest.TestCase):
-    def test_uop_const(self):
-        print(EmberMop.layout.as_shape())
-
-        for name, uop in EmberParams().decode.mop_group.members.items():
-            c = uop.as_const()
+    def test_mop_const(self):
+        for name, mop in EmberParams().mops.items():
+            c = mop.as_const()
 

@@ -243,7 +243,7 @@ class L1IFillRequest(Signature):
     def __init__(self, p: EmberParams):
         super().__init__({
             "en": In(1),
-            "paddr": In(p.xlen),
+            "paddr": In(p.rv.xlen),
 
         })
 

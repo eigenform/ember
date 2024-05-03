@@ -32,7 +32,7 @@ class EmberCore(Component):
         m = Module()
 
         #ifu = m.submodules.ifu = FetchUnit(self.p)
-        #fetch_addr = Signal(self.p.xlen, reset=self.p.reset_vector)
+        #fetch_addr = Signal(self.p.rv.xlen, reset=self.p.reset_vector)
         #fetch_addr_v = Signal(reset=True)
         #m.d.sync += addr.eq(addr + 0x20)
         #m.d.comb += [

@@ -1,7 +1,11 @@
-Ember
-=====
+EMBR (Ember)
+============
 
 It's a computer.
+
+.. note:: 
+   You should not expect this to be synthesizable. 
+
 
 ------
 
@@ -26,5 +30,4 @@ It's a computer.
    modules/itlb
    modules/fetch
    modules/decode
-
 

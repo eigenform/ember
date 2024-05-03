@@ -11,63 +11,84 @@ from ember.uarch.mop import *
 from ember.param import *
 
 class DecodeRequest(Signature):
-    def __init__(self):
+    """ Request to decode a single instruction. """
+    def __init__(self, param: EmberParams):
         super().__init__({
-            "bits": Out(unsigned(32)),
+            "inst": Out(32),
+        })
+
+class DecodeResponse(Signature):
+    def __init__(self, param: EmberParams):
+        super().__init__({
+            "mop": Out(EmberMop.layout),
+            "mop_id": Out(param.inst.enum_type),
+            "rd": Out(5),
+            "rs1": Out(5),
+            "rs2": Out(5),
+            "valid": Out(1),
         })
 
 
-
-
 class Rv32GroupDecoder(Component):
-    """ A decoder for an arbitrary group of RV32 instructions.
+    """ A decoder that maps a single RV32 instruction onto a macro-op. 
 
-    .. note:: 
-        The logic here can probably be minimized.
+
+
+    .. warning::
+        For now, this decoder probably synthesizes into many cascading levels
+        of logic. This is probably fine for simple testing, but the delay on 
+        actual hardware is probably too great to be clocked very high. 
+
+        Instead, you probably want to check all cases in parallel, priority 
+        encode the resulting bits, and then use the index to access a table of 
+        macro-op constants. 
+
     """
     def __init__(self, param: EmberParams):
         self.p = param
         signature = Signature({
-            "inst": In(unsigned(32)),
-            "uop": Out(EmberMop.layout),
+            "req": In(DecodeRequest(param)),
+            "resp": Out(DecodeResponse(param)),
         })
         super().__init__(signature)
         return
 
     def elaborate(self, platform):
         m = Module()
-        enc = View(RvEncoding(), self.inst)
+        view = View(RvEncoding(), self.req.inst)
 
-        uop = Signal(EmberMop.layout)
-
-        with m.Switch(self.inst):
-            for (idx, (name, op)) in enumerate(self.p.decode.inst_group.members.items()):
-                with m.Case(str(op.match())):
-                    m.d.comb += self.uop.eq(self.p.decode.mop_group.members[name].as_const())
-            with m.Default():
-                m.d.comb += self.uop.eq(EmberMop(RvFormat.R).as_const())
- 
-        # A bit for each instruction in the group
-        #arr = Signal(self.group.id_shape_onehot())
-        #for (idx, (name, op)) in enumerate(self.group.members_by_specificity()):
-        #    m.d.comb += arr[idx].eq(self.inst.matches(str(op.match())))
-        #m.submodules.encoder = encoder = Encoder(len(self.group.members))
-        #encoder_valid = ~encoder.n
-        #encoder_idx   = encoder.o
-        #m.d.comb += [
-        #    #Print(Format("{:0{width}b}", arr, width=len(self.group.members))),
-        #    encoder.i.eq(Cat(*arr)),
-        #]
-
-        
-
-
-
-        m.d.sync += [
-            #self.mop.eq(encoder_idx),
-            #self.mop_valid.eq(encoder_valid)
+        m.d.comb += [
+            self.resp.rd.eq(view.rd),
+            self.resp.rs1.eq(view.rs1),
+            self.resp.rs2.eq(view.rs2),
         ]
 
+        # Generate decoder cases (mapping instructions to macro-ops).
+        # Since masks might have dont-care bits, we should probably order
+        # these by the number of defined bits in the mask. 
+        decoder_cases = {}
+        for name, op in self.p.inst.items_by_specificity():
+            decoder_cases[name] = { 
+                "mask": str(op.match()),
+                "mop":  self.p.mops.get_const_by_name(name),
+                "id":   self.p.inst.get_inst_id_by_name(name),
+            }
+
+        # FIXME: This doesn't do matching in parallel. 
+        with m.Switch(self.req.inst):
+            for name, case in decoder_cases.items():
+                with m.Case(case["mask"]):
+                    m.d.comb += [
+                        self.resp.mop.eq(case["mop"]),
+                        self.resp.mop_id.eq(case["id"]),
+                        self.resp.valid.eq(1),
+                    ]
+            with m.Default():
+                m.d.comb += [
+                    self.resp.mop.eq(EmberMop(RvFormat.R).as_const()),
+                    self.resp.mop_id.eq(0),
+                    self.resp.valid.eq(0),
+                ]
         return m
 
 

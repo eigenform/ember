@@ -18,7 +18,7 @@ class FetchRequest(Signature):
         super().__init__({
             "ready": In(1),
             "valid": Out(1),
-            "vaddr": Out(p.xlen),
+            "vaddr": Out(p.rv.xlen),
         })
 
 class FetchResponse(Signature):
@@ -44,13 +44,13 @@ class FetchUnit(Component):
 
         self.stage = PipelineStages()
         self.stage.add_stage(1, {
-            "req_vaddr": unsigned(self.p.xlen),
+            "req_vaddr": unsigned(self.p.rv.xlen),
         })
         self.stage.add_stage(2, {
-            "req_vaddr": unsigned(self.p.xlen),
+            "req_vaddr": unsigned(self.p.rv.xlen),
         })
         self.stage.add_stage(3, {
-            "req_vaddr": unsigned(self.p.xlen),
+            "req_vaddr": unsigned(self.p.rv.xlen),
         })
 
 
@@ -197,7 +197,7 @@ class FetchUnit(Component):
         ]
         
         ## Output to ibus interface
-        #fill_adr = Signal(self.p.xlen - 2)
+        #fill_adr = Signal(self.p.rv.xlen - 2)
         #m.d.comb += [
         #    self.ibus.adr.eq(fill_adr),
         #    self.ibus.cyc.eq(0),

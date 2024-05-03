@@ -115,6 +115,63 @@ class EmberMop(object):
 class EmberMopGroup(object):
     def __init__(self, members={}):
         self.members = members
+    def items(self):
+        return self.members.items()
+    def get_mop_by_name(self, mnemonic):
+        return self.members[mnemonic]
+    def get_const_by_name(self, mnemonic):
+        return self.members[mnemonic].as_const()
+
+
+DEFAULT_EMBER_MOPS = EmberMopGroup(members={
+    "AUIPC":  EmberMop(RvFormat.U, alloc=1, alu_op=AluOp.ADD,
+                      dst=DestOperand.RD, src1=SourceOperand.PC, src2=SourceOperand.IMM),
+    "LUI":    EmberMop(RvFormat.U, alloc=1, alu_op=AluOp.ADD, dst=DestOperand.RD),
+
+    "JAL":    EmberMop(RvFormat.J, jmp_op=JmpOp.JAL, dst=DestOperand.PC),
+    "JALR":   EmberMop(RvFormat.I, alloc=1, jmp_op=JmpOp.JALR, dst=DestOperand.RD|DestOperand.PC),
+    "BEQ":    EmberMop(RvFormat.B, brn_op=BrnOp.EQ, dst=DestOperand.PC,),
+    "BNE":    EmberMop(RvFormat.B, brn_op=BrnOp.NE, dst=DestOperand.PC,),
+    "BLT":    EmberMop(RvFormat.B, brn_op=BrnOp.LT, dst=DestOperand.PC,),
+    "BGE":    EmberMop(RvFormat.B, brn_op=BrnOp.GE, dst=DestOperand.PC,),
+    "BLTU":   EmberMop(RvFormat.B, brn_op=BrnOp.LTU, dst=DestOperand.PC,),
+    "BGEU":   EmberMop(RvFormat.B, brn_op=BrnOp.GEU, dst=DestOperand.PC,),
+
+    "LB":     EmberMop(RvFormat.I, alloc=1, ld_op=LoadOp.B, dst=DestOperand.RD,),
+    "LH":     EmberMop(RvFormat.I, alloc=1, ld_op=LoadOp.H, dst=DestOperand.RD,),
+    "LW":     EmberMop(RvFormat.I, alloc=1, ld_op=LoadOp.W, dst=DestOperand.RD,),
+    "LBU":    EmberMop(RvFormat.I, alloc=1, ld_op=LoadOp.BU, dst=DestOperand.RD,),
+    "LHU":    EmberMop(RvFormat.I, alloc=1, ld_op=LoadOp.HU, dst=DestOperand.RD,),
+
+    "SB":     EmberMop(RvFormat.S, st_op=StoreOp.B, dst=DestOperand.MEM,),
+    "SH":     EmberMop(RvFormat.S, st_op=StoreOp.H, dst=DestOperand.MEM,),
+    "SW":     EmberMop(RvFormat.S, st_op=StoreOp.W, dst=DestOperand.MEM,),
+
+    "ADDI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.ADD, dst=DestOperand.RD,),
+    "SLTI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.SLT, dst=DestOperand.RD,),
+    "SLTIU":  EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.SLTU, dst=DestOperand.RD,),
+    "XORI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.XOR, dst=DestOperand.RD,),
+    "ORI":    EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.OR, dst=DestOperand.RD,),
+    "ANDI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.AND, dst=DestOperand.RD,),
+    "SLLI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.SLL, dst=DestOperand.RD,),
+    "SRLI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.SRL, dst=DestOperand.RD,),
+    "SRAI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.SRA, dst=DestOperand.RD,),
+
+    "ADD":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.ADD, dst=DestOperand.RD,),
+    "SUB":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SUB, dst=DestOperand.RD,),
+    "SLL":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SLL, dst=DestOperand.RD,),
+    "SLT":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SLT, dst=DestOperand.RD,),
+    "SLTU":   EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SLTU, dst=DestOperand.RD,),
+    "XOR":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.XOR, dst=DestOperand.RD,),
+    "SRL":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SRL, dst=DestOperand.RD,),
+    "SRA":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SRA, dst=DestOperand.RD,),
+    "OR":     EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.OR, dst=DestOperand.RD,),
+    "AND":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.AND, dst=DestOperand.RD,),
+
+    "FENCE":  EmberMop(RvFormat.I, sys_op=SysOp.FENCE),
+    "ECALL":  EmberMop(RvFormat.I, sys_op=SysOp.ECALL),
+    "EBREAK": EmberMop(RvFormat.I, sys_op=SysOp.EBREAK),
+})
 
 
 
