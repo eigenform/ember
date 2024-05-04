@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supported Instructions &mdash; Ember</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Return Address Predictor" href="../modules/rap.html" />
+    <link rel="prev" title="Ember Parameters" href="param.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html">
+            
+              <img src="../_static/embr-rv32-600.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Build Process</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Using this Repository</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Core Configuration</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="param.html">Ember Parameters</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Supported Instructions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Module-level Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules/rap.html">Return Address Predictor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/l1i.html">L1 Instruction Cache</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/itlb.html">L1 Instruction Cache TLB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/fetch.html">Instruction Fetch</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/decode.html">Instruction Decode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/predecode.html">Instruction Predecode</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Python</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Supported Instructions</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/config/isa.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="supported-instructions">
+<h1>Supported Instructions<a class="headerlink" href="#supported-instructions" title="Permalink to this heading"></a></h1>
+<p>In the Ember core, the set of supported instructions is ultimately defined by:</p>
+<ul class="simple">
+<li><p>Including an <code class="xref py py-class docutils literal notranslate"><span class="pre">RvInstGroup</span></code> within <code class="xref py py-class docutils literal notranslate"><span class="pre">EmberParams</span></code></p></li>
+<li><p>Including an <code class="xref py py-class docutils literal notranslate"><span class="pre">EmberMopGroup</span></code> within <code class="xref py py-class docutils literal notranslate"><span class="pre">EmberParams</span></code></p></li>
+<li><p>A decoder module that maps each <code class="xref py py-class docutils literal notranslate"><span class="pre">RvInst</span></code> to an <code class="xref py py-class docutils literal notranslate"><span class="pre">EmberMop</span></code></p></li>
+<li><p>One or more modules that decompose <code class="xref py py-class docutils literal notranslate"><span class="pre">EmberMop</span></code> into micro-ops</p></li>
+</ul>
+<section id="defining-risc-v-instructions">
+<h2>Defining RISC-V Instructions<a class="headerlink" href="#defining-risc-v-instructions" title="Permalink to this heading"></a></h2>
+<p>RISC-V instructions are described by an <code class="xref py py-class docutils literal notranslate"><span class="pre">RvInst</span></code>, which is used to
+generate a bitmask for uniquely identifying the instruction.
+A set of RISC-V instructions is organized into a <code class="xref py py-class docutils literal notranslate"><span class="pre">RvInstGroup</span></code>.</p>
+</section>
+<section id="defining-macro-ops">
+<h2>Defining Macro-Ops<a class="headerlink" href="#defining-macro-ops" title="Permalink to this heading"></a></h2>
+<p>In the Ember core, each <code class="xref py py-class docutils literal notranslate"><span class="pre">RvInst</span></code> must be associated with
+a “macro-op” (<code class="xref py py-class docutils literal notranslate"><span class="pre">EmberMop</span></code>) which describes a set of control signals
+that will be carried down the instruction pipeline until dispatch.</p>
+<p>The set of all macro-ops supported by the core is defined by an
+<code class="xref py py-class docutils literal notranslate"><span class="pre">EmberMopGroup</span></code>, and must match the associated <code class="xref py py-class docutils literal notranslate"><span class="pre">RvInstGroup</span></code>.</p>
+<p>After dispatch, macro-ops are converted into a “micro-op” representation
+which is specific to a particular pipeline in the backend.</p>
+</section>
+<section id="defining-micro-ops">
+<h2>Defining Micro-Ops<a class="headerlink" href="#defining-micro-ops" title="Permalink to this heading"></a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>TODO</p>
+</div>
+<hr class="docutils" />
+<span class="target" id="module-ember.riscv.inst"></span><dl class="py class">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInst">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.riscv.inst.</span></span><span class="sig-name descname"><span class="pre">RvInst</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">RvFormat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">opcode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">RvOpcode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f3</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f7</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f12</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rd</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rs1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInst" title="Permalink to this definition"></a></dt>
+<dd><p>Definition of a RISC-V instruction.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInst.match">
+<span class="sig-name descname"><span class="pre">match</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInst.match" title="Permalink to this definition"></a></dt>
+<dd><p>Return the <a class="reference internal" href="#ember.riscv.inst.RvInstMatch" title="ember.riscv.inst.RvInstMatch"><code class="xref py py-class docutils literal notranslate"><span class="pre">RvInstMatch</span></code></a> associated with this instruction.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInstGroup">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.riscv.inst.</span></span><span class="sig-name descname"><span class="pre">RvInstGroup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enum_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'RvInstId'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">members</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInstGroup" title="Permalink to this definition"></a></dt>
+<dd><p>A group of supported RISC-V instructions.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInstGroup.add_group">
+<span class="sig-name descname"><span class="pre">add_group</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInstGroup.add_group" title="Permalink to this definition"></a></dt>
+<dd><p>Append another group to this group.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInstGroup.as_enum">
+<span class="sig-name descname"><span class="pre">as_enum</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInstGroup.as_enum" title="Permalink to this definition"></a></dt>
+<dd><p>Return the Enum type for this group.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInstGroup.get_inst_by_name">
+<span class="sig-name descname"><span class="pre">get_inst_by_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mnemonic</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInstGroup.get_inst_by_name" title="Permalink to this definition"></a></dt>
+<dd><p>Return the RvInst for the given mnemonic.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInstGroup.get_inst_id_by_name">
+<span class="sig-name descname"><span class="pre">get_inst_id_by_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mnemonic</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInstGroup.get_inst_id_by_name" title="Permalink to this definition"></a></dt>
+<dd><p>Return the RvInstId value for the given mnemonic.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInstGroup.items">
+<span class="sig-name descname"><span class="pre">items</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInstGroup.items" title="Permalink to this definition"></a></dt>
+<dd><p>Return tuples representing items in this group.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInstGroup.items_by_specificity">
+<span class="sig-name descname"><span class="pre">items_by_specificity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInstGroup.items_by_specificity" title="Permalink to this definition"></a></dt>
+<dd><p>Return a list of members sorted by mask specificity.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInstMatch">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.riscv.inst.</span></span><span class="sig-name descname"><span class="pre">RvInstMatch</span></span><a class="headerlink" href="#ember.riscv.inst.RvInstMatch" title="Permalink to this definition"></a></dt>
+<dd><p>Container for the string representation of a bitmask used to 
+uniquely identify a RISC-V instruction.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInstMatch.add_match_value">
+<span class="sig-name descname"><span class="pre">add_match_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInstMatch.add_match_value" title="Permalink to this definition"></a></dt>
+<dd><p>Define some bits in the mask at the provided location.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInstMatch.as_string">
+<span class="sig-name descname"><span class="pre">as_string</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInstMatch.as_string" title="Permalink to this definition"></a></dt>
+<dd><p>Return the string representation of the bitmask.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ember.riscv.inst.RvInstMatch.num_effective_bits">
+<span class="sig-name descname"><span class="pre">num_effective_bits</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ember.riscv.inst.RvInstMatch.num_effective_bits" title="Permalink to this definition"></a></dt>
+<dd><p>Return the number of effective bits in the mask.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="param.html" class="btn btn-neutral float-left" title="Ember Parameters" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../modules/rap.html" class="btn btn-neutral float-right" title="Return Address Predictor" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script> 
+
+</body>
+</html>
