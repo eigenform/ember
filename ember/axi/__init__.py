@@ -30,9 +30,10 @@ class AXIConfig(object):
     def __init__(self, addr_width, data_width, 
                  id_width, lock_width, size_width):
         assert data_width % 8 == 0
+        self.version    = 4
         self.addr_width = addr_width
         self.data_width = data_width
-        self.id_width = id_width
+        self.id_width   = id_width
         self.lock_width = lock_width
         self.size_width = size_width
 
@@ -41,6 +42,8 @@ class AXIAddrChannel(Signature):
     def __init__(self, cfg: AXIConfig):
         self.cfg = cfg
         super().__init__({
+            "valid": Out(1),
+            "ready": In(1),
             "addr": Out(cfg.addr_width),
             "size": Out(AXISize),
             "len":  Out(8),
@@ -56,6 +59,8 @@ class AXIWriteDataChannel(Signature):
     def __init__(self, cfg: AXIConfig):
         self.cfg = cfg
         super().__init__({
+            "valid": Out(1),
+            "ready": In(1),
             "data": Out(cfg.data_width),
             "strb": Out(cfg.data_width // 8),
             "last": Out(1),
@@ -65,6 +70,8 @@ class AXIWriteRespChannel(Signature):
     def __init__(self, cfg: AXIConfig):
         self.cfg = cfg
         super().__init__({
+            "valid": In(1),
+            "ready": Out(1),
             "id": Out(cfg.id_width),
             "resp": Out(AXIResp),
         })
@@ -73,13 +80,15 @@ class AXIReadDataChannel(Signature):
     def __init__(self, cfg: AXIConfig):
         self.cfg = cfg
         super().__init__({
+            "valid": In(1),
+            "ready": Out(1),
             "data": Out(cfg.data_width),
             "id": Out(cfg.id_width),
             "last": Out(1),
             "resp": Out(AXIResp),
         })
 
-class AXISourcePort(Signature):
+class AXIPort(Signature):
     def __init__(self, cfg: AXIConfig):
         self.cfg = cfg
         super().__init__({
@@ -90,15 +99,16 @@ class AXISourcePort(Signature):
             "rdata": In(AXIReadDataChannel(cfg)),
         })
 
-class AXISinkPort(Signature):
-    def __init__(self, cfg: AXIConfig):
-        self.cfg = cfg
-        super().__init__({
-            "waddr": In(AXIAddrChannel(cfg)),
-            "wdata": In(AXIWriteDataChannel(cfg)),
-            "wresp": Out(AXIWriteRespChannel(cfg)),
-            "raddr": In(AXIAddrChannel(cfg)),
-            "rdata": Out(AXIReadDataChannel(cfg)),
-        })
+#class AXISinkPort(Signature):
+#    def __init__(self, cfg: AXIConfig):
+#        self.cfg = cfg
+#        super().__init__({
+#            "waddr": In(AXIAddrChannel(cfg)),
+#            "wdata": In(AXIWriteDataChannel(cfg)),
+#            "wresp": Out(AXIWriteRespChannel(cfg)),
+#            "raddr": In(AXIAddrChannel(cfg)),
+#            "rdata": Out(AXIReadDataChannel(cfg)),
+#        })
+
 
 

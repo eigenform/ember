@@ -11,6 +11,7 @@ class RvFormat(Enum, shape=unsigned(3)):
     U = 0b100
     J = 0b101
 
+
 class RvOpcode(Enum, shape=unsigned(5)):
     """ A RISC-V opcode. """
     LOAD      = 0b00000
@@ -133,6 +134,47 @@ class F3Mul(Enum, shape=unsigned(3)):
 #    def j_simm20(self):
 #        return Cat(C(0,1), self.bits[21:31], self.bits[20], self.bits[12:20],
 #                   Repl(self.bits[-1], 12))
+
+class RvImmFormat(Enum):
+    """ RISC-V immediate data format. """
+    NONE = 0
+    I    = 1 # sext32(imm12)
+    S    = 2 # sext32(imm12)
+    B    = 3 # sext32(imm12 << 1)
+    U    = 4 # (imm20 << 12)
+    J    = 5 # sext32(imm20 << 1)
+
+class RvImmData(FlexibleLayout):
+    def __init__(self):
+        super().__init__(20, {
+            "i_mag11": Field(unsigned(11), 0),
+            "i_sign":  Field(unsigned(1), 11),
+
+            "s_mag11": Field(unsigned(11), 0),
+            "s_sign":  Field(unsigned(1), 11),
+
+            "b_mag11": Field(unsigned(11), 0),
+            "b_sign":  Field(unsigned(1), 11),
+
+            "j_mag19": Field(unsigned(19), 0),
+            "j_sign":  Field(unsigned(1), 19),
+
+            "u_imm20": Field(unsigned(20), 0),
+        })
+
+class RvImmDataView(View):
+    def __init__(self, target):
+        super().__init__(RvImmData(), target)
+    def i_sext32(self):
+        return Cat(self.i_mag11, self.i_sign.replicate(21))
+    def s_sext32(self):
+        return Cat(self.s_mag11, self.s_sign.replicate(21))
+    def b_sext32(self):
+        return Cat(C(0, 1), self.b_mag11, self.b_sign.replicate(20))
+    def u_ext32(self):
+        return Cat(C(0, 12), self.u_imm20)
+    def j_sext32(self):
+        return Cat(C(0, 1), self.j_mag19, self.j_sign.replicate(12))
 
 
 class RvEncoding(FlexibleLayout):
