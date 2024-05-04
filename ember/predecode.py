@@ -10,15 +10,7 @@ from ember.param import *
 from ember.cache.l1i import *
 from ember.cache.itlb import *
 from ember.riscv.encoding import *
-
-class ControlFlowOp(Enum):
-    NONE     = 0
-    BRANCH   = 1
-    JUMP_DIR = 2
-    JUMP_IND = 3
-    CALL_DIR = 4
-    CALL_IND = 5
-    RET      = 6
+from ember.uarch.mop import ControlFlowOp
 
 class Rv32Predecoder(Component):
     """ Predecoder for a single RV32 instruction.

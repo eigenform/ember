@@ -26,6 +26,7 @@ It's a computer.
    :caption: Module-level Reference
    :titlesonly:
 
+   modules/rap
    modules/l1i
    modules/itlb
    modules/fetch

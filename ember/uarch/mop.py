@@ -71,6 +71,15 @@ class JmpOp(Enum):
     JAL  = 0b01
     JALR = 0b10
 
+class ControlFlowOp(Enum):
+    NONE     = 0
+    BRANCH   = 1
+    JUMP_DIR = 2
+    JUMP_IND = 3
+    CALL_DIR = 4
+    CALL_IND = 5
+    RET      = 6
+
 class EmberMop(object):
     layout = StructLayout({
         "fmt": RvFormat,
