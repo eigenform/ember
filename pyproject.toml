@@ -29,4 +29,4 @@ docs-live.cmd = "sphinx-autobuild -E docs/ docs/build --watch ember"
 docs-live-host.cmd = "sphinx-autobuild docs/ docs/build --watch ember --host 0.0.0.0"
 
 #sim = { call = "ember:sim()" }
-#build_core_harness = { call = "ember.harness:build_core_harness()" }
+build-core-harness = { call = "ember.harness:build_core_harness()" }

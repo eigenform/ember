@@ -247,18 +247,44 @@ class L1IFillRequest(Signature):
 
         })
 
-
-
-class L1IWaySelector(Component):
-    def __init__(self, param: EmberParams):
-        self.p = param
-        signature = Signature({
-        })
-        super().__init__(signature)
+class L1IWaySelect(Component):
+    def __init__(self, num_ways: int, tag_layout: Layout):
+        self.num_ways = num_ways
+        self.tag_layout = tag_layout
+        super().__init__(Signature({
+            "i_valid": In(1),
+            "i_tag": In(tag_layout),
+            "i_tags": In(tag_layout).array(num_ways),
+            "o_way": Out(exact_log2(num_ways)),
+            "o_hit": Out(1),
+            "o_valid": Out(1),
+        }))
 
     def elaborate(self, platform):
         m = Module()
+
+        match_arr = Array(Signal() for way_idx in range(self.num_ways))
+        for way_idx in range(self.num_ways):
+            m.d.comb += [
+                match_arr[way_idx].eq(
+                    (self.i_tags[way_idx].valid) &
+                    (self.i_tag.ppn == self.i_tags[way_idx].ppn)
+                )
+            ]
+
+        m.submodules.match_encoder = match_encoder = \
+                PriorityEncoder(exact_log2(self.num_ways))
+        match_hit  = (~match_encoder.n & self.i_valid)
+        match_idx  = match_encoder.o
+        m.d.comb += [
+            match_encoder.i.eq(Cat(*match_arr)),
+            self.o_way.eq(match_idx),
+            self.o_hit.eq(match_hit),
+            self.o_valid.eq(self.i_valid),
+        ]
+ 
         return m
+
 
 
 
@@ -267,6 +293,7 @@ class L1IFillUnit(Component):
         self.p = param
         signature = Signature({
             "ready": Out(1),
+            "l1i_wp": Out(L1ICacheWritePort(param)),
 
             # Connection to the ibus for L1I cache fills
             "ibus": Out(WishboneSignature(

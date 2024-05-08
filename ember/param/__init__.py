@@ -6,6 +6,7 @@ from amaranth.lib.data import *
 from amaranth.utils import ceil_log2
 
 from ember.riscv.inst import *
+from ember.riscv.paging import *
 from ember.uarch.mop import *
 
 #class Parameters(object):
@@ -94,7 +95,7 @@ class L1ICacheParams(object):
         # Layout of an L1I tag
         self.tag_layout  = StructLayout({
             "valid": unsigned(1),
-            "tag": unsigned(self.num_tag_bits)
+            "ppn": PhysicalPageNumberSv32(),
         })
 
         # TLB parameters

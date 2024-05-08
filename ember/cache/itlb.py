@@ -32,15 +32,24 @@ class L1ICacheTLBResponse(Signature):
     def __init__(self, param: L1ICacheParams):
         super().__init__({
             'valid': Out(1),
-            'ppn': Out(PhysicalPageNumberSv32()),
+            'hit': Out(1),
+            'pte': Out(PageTableEntrySv32()),
         })
+
+class L1ICacheTLBReadPort(Signature):
+    def __init__(self, param: L1ICacheParams):
+        super().__init__({
+            'req': Out(L1ICacheTLBRequest(param)),
+            'resp': In(L1ICacheTLBResponse(param)),
+        })
+
 
 class L1ICacheTLBFillRequest(Signature):
     """ A request to write an entry into the L1I TLB. """
     def __init__(self, param: L1ICacheParams):
         super().__init__({
             'valid': Out(1),
-            'ppn': Out(PhysicalPageNumberSv32()),
+            'pte': Out(PageTableEntrySv32()),
             'vpn': Out(VirtualPageNumberSv32()),
         })
 
@@ -49,6 +58,8 @@ class L1ICacheTLB(Component):
     """ L1 instruction cache TLB (translation lookaside buffer).
 
     This is a small fully-associative cache for page table entries. 
+    Each entry in the TLB associates a virtual page number (VPN) to 
+    a page table entry (PTE). 
 
     Replacement Policy
     ==================
@@ -68,8 +79,7 @@ class L1ICacheTLB(Component):
 
         signature = Signature({
             "fill_req": In(L1ICacheTLBFillRequest(param)),
-            "req":  In(L1ICacheTLBRequest(param)),
-            "resp": Out(L1ICacheTLBResponse(param)),
+            "rp": In(L1ICacheTLBReadPort(param)),
         })
         super().__init__(signature)
 
@@ -85,13 +95,14 @@ class L1ICacheTLB(Component):
         # Tag and data arrays.
         # FIXME: These are going be turned into a lot of flipflops..
         data_arr  = Array(
-            Signal(PhysicalPageNumberSv32(), name=f"data_arr{i}") 
+            Signal(PageTableEntrySv32(), name=f"data_arr{i}") 
             for i in range(self.depth)
         )
         tag_arr   = Array(
             Signal(VirtualPageNumberSv32(), name=f"tag_arr{i}") 
             for i in range(self.depth)
         )
+        valid_arr = Array(Signal() for i in range(self.depth))
 
         # Generates a "random" index for allocations/evictions.
         # FIXME: The tree-based PLRU is probably a more reasonable strategy.
@@ -105,20 +116,23 @@ class L1ICacheTLB(Component):
         # This encoder converts the match signals (one-hot) into an index
         # into the data array. 
         m.submodules.match_encoder = match_encoder = PriorityEncoder(self.depth)
-        match_hit  = (~match_encoder.n & self.req.valid)
+        match_hit  = (~match_encoder.n & self.rp.req.valid)
         match_idx  = match_encoder.o
         match_data = Mux(match_hit, data_arr[match_idx], 0)
 
         # Default assignment for the response
         m.d.sync += [
-            self.resp.valid.eq(0),
-            self.resp.ppn.eq(0),
+            self.rp.resp.valid.eq(self.rp.req.valid),
+            self.rp.resp.hit.eq(0),
+            self.rp.resp.pte.eq(0),
         ]
 
-        with m.If(self.req.valid):
+        with m.If(self.rp.req.valid):
             # Drive input to all of the comparators
             m.d.comb += [
-                match_arr[idx].eq(tag_arr[idx] == self.req.vpn)
+                match_arr[idx].eq(
+                    (tag_arr[idx] == self.rp.req.vpn) & valid_arr[idx]
+                )
                 for idx in range(self.depth)
             ]
             # Obtain the index of the matching entry (if one exists). 
@@ -127,8 +141,8 @@ class L1ICacheTLB(Component):
             ]
             # Data for the matching entry is available on the next cycle.
             m.d.sync += [
-                self.resp.valid.eq(match_hit),
-                self.resp.ppn.eq(match_data),
+                self.rp.resp.hit.eq(match_hit),
+                self.rp.resp.pte.eq(match_data),
             ]
 
         fill_idx = lfsr_out
@@ -136,7 +150,8 @@ class L1ICacheTLB(Component):
         with m.If(self.fill_req.valid):
             m.d.sync += [
                 tag_arr[fill_idx].eq(self.fill_req.vpn),
-                data_arr[fill_idx].eq(self.fill_req.ppn),
+                data_arr[fill_idx].eq(self.fill_req.pte),
+                valid_arr[fill_idx].eq(1),
             ]
 
         return m

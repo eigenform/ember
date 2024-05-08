@@ -56,11 +56,11 @@ def add_layout_case(m: Module, bits, fmt, opcode,
 class RvEncodingUnitTests(unittest.TestCase):
     def test_imm_shape(self):
         view = RvEncodingImmediateView(C(0, 32))
-        print("I", view.get_i_imm12().shape())
-        print("S", view.get_s_imm12().shape())
-        print("B", view.get_b_imm12().shape())
-        print("U", view.get_u_imm20().shape())
-        print("J", view.get_j_imm20().shape())
+        #print("I", view.get_i_imm12().shape())
+        #print("S", view.get_s_imm12().shape())
+        #print("B", view.get_b_imm12().shape())
+        #print("U", view.get_u_imm20().shape())
+        #print("J", view.get_j_imm20().shape())
 
     def test_enc_layout_simple(self):
         m = Module()

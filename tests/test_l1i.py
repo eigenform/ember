@@ -34,34 +34,34 @@ def tb_data_array_rw(dut: L1ICacheDataArray):
 
 def tb_l1itlb(dut: L1ICacheTLB):
     yield dut.fill_req.valid.eq(1)
-    yield dut.fill_req.ppn.eq(0x1111)
+    yield dut.fill_req.pte.eq(0x1111_1111)
     yield dut.fill_req.vpn.eq(0x1001)
 
     yield Tick()
     yield dut.fill_req.valid.eq(1)
-    yield dut.fill_req.ppn.eq(0x2222)
+    yield dut.fill_req.pte.eq(0x2222_2222)
     yield dut.fill_req.vpn.eq(0x2002)
-    yield dut.req.valid.eq(1)
-    yield dut.req.vpn.eq(0x1001)
+    yield dut.rp.req.valid.eq(1)
+    yield dut.rp.req.vpn.eq(0x1001)
 
     yield Tick()
     yield dut.fill_req.valid.eq(0)
-    yield dut.fill_req.ppn.eq(0)
+    yield dut.fill_req.pte.eq(0)
     yield dut.fill_req.vpn.eq(0)
-    yield dut.req.valid.eq(1)
-    yield dut.req.vpn.eq(0x2002)
-    valid = yield dut.resp.valid
-    ppn   = yield dut.resp.ppn
+    yield dut.rp.req.valid.eq(1)
+    yield dut.rp.req.vpn.eq(0x2002)
+    valid = yield dut.rp.resp.valid
+    pte   = yield dut.rp.resp.pte
     assert valid == 1
-    assert ppn == 0x1111
+    assert pte == 0x1111_1111
 
     yield Tick()
-    yield dut.req.valid.eq(0)
-    yield dut.req.vpn.eq(0)
-    valid = yield dut.resp.valid
-    ppn   = yield dut.resp.ppn
+    yield dut.rp.req.valid.eq(0)
+    yield dut.rp.req.vpn.eq(0)
+    valid = yield dut.rp.resp.valid
+    pte   = yield dut.rp.resp.pte
     assert valid == 1
-    assert ppn == 0x2222
+    assert pte == 0x2222_2222
 
 class L1ICacheHarness(object):
     def __init__(self, dut: L1ICache):
@@ -73,7 +73,7 @@ class L1ICacheHarness(object):
         yield self.dut.wp.req.set.eq(set_idx)
         yield self.dut.wp.req.way.eq(way_idx)
         yield self.dut.wp.req.tag_data.valid.eq(1)
-        yield self.dut.wp.req.tag_data.tag.eq(tag)
+        yield self.dut.wp.req.tag_data.ppn.eq(tag)
         yield self.dut.wp.req.line_data[0].eq(line[0])
         yield self.dut.wp.req.line_data[1].eq(line[1])
         yield self.dut.wp.req.line_data[2].eq(line[2])
@@ -84,7 +84,7 @@ class L1ICacheHarness(object):
         yield self.dut.wp.req.set.eq(0)
         yield self.dut.wp.req.way.eq(0)
         yield self.dut.wp.req.tag_data.valid.eq(0)
-        yield self.dut.wp.req.tag_data.tag.eq(0)
+        yield self.dut.wp.req.tag_data.ppn.eq(0)
         yield self.dut.wp.req.line_data.eq(0)
 
     def clear_read_port(self):
@@ -102,7 +102,7 @@ class L1ICacheHarness(object):
         line_data = []
         for way in range(EmberParams.l1i.num_ways):
             v = yield self.dut.rp.resp.tag_data[way].valid
-            tag = yield self.dut.rp.resp.tag_data[way].tag
+            tag = yield self.dut.rp.resp.tag_data[way].ppn
             line = []
             for i in range(EmberParams.l1i.line_depth):
                 j = yield self.dut.rp.resp.line_data[way][i]
@@ -157,36 +157,4 @@ class L1ICacheTests(unittest.TestCase):
             "tb_l1icache_rw"
         )
         tb.run()
-
-
-    #def test_sim(self):
-    #    dut = L1ICache(EmberParams)
-    #    sets = EmberParams.l1i.num_sets 
-    #    ways = EmberParams.l1i.num_ways
-    #    print()
-
-    #    #print(dut.__annotations__)
-    #    def foo():
-    #        for idx in range(16):
-    #            yield dut.rp.set.eq(idx)
-    #            yield dut.rp.en.eq(1)
-    #            Tick()
-
-    #            for way_idx in range(0, ways):
-    #                valid     = yield dut.rp.valid
-    #                line_data = yield dut.rp.line_data[way_idx]
-    #                tag_data  = yield dut.rp.tag_data[way_idx]
-    #                print(f"valid={valid}")
-    #                if valid == 1:
-    #                    print("valid set")
-    #                    print(line_data)
-    #                    print(tag_data)
-
-
-    #    sim = Simulator(dut)
-    #    sim.add_clock(1e-6)
-    #    sim.add_process(foo)
-    #    with open("/tmp/test_l1i.vcd", "w") as f:
-    #        with sim.write_vcd(vcd_file=f):
-    #            sim.run()
 

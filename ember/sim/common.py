@@ -4,13 +4,13 @@ from amaranth import *
 from amaranth.sim import *
 from amaranth.back import verilog, rtlil
 
-class Harness(object):
-    """ Container for wrapping the device-under-test during simulation.
-    The user is expected to inherit this class and implement methods for
-    driving/sampling different signals during simulation. 
-    """
-    def __init__(self, dut: Elaboratable):
-        self.dut = dut
+#class Harness(object):
+#    """ Container for wrapping the device-under-test during simulation.
+#    The user is expected to inherit this class and implement methods for
+#    driving/sampling different signals during simulation. 
+#    """
+#    def __init__(self, dut: Elaboratable):
+#        self.dut = dut
 
 class TestbenchComb(object):
     def __init__(self, dut: Elaboratable, proc, vcd_name=""):

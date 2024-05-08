@@ -10,17 +10,23 @@ from amaranth import *
 from amaranth.sim import *
 from amaranth.back import verilog, rtlil
 
-def tb_fetch_simple(dut: FetchUnit):
-    yield dut.req.valid.eq(1)
-    yield dut.req.vaddr.eq(0x00010000)
+def tb_fetch_simple(dut: FetchUnitHarness):
+    print()
+    yield dut.fetch_req.valid.eq(1)
+    yield dut.fetch_req.vaddr.eq(0x0000_0000)
+    yield dut.fetch_req.passthru.eq(1)
     yield Tick()
+    yield dut.fetch_req.vaddr.eq(0x0000_0020)
+
     yield Tick()
+    yield dut.fetch_req.vaddr.eq(0x0000_0040)
+
     yield Tick()
+    yield dut.fetch_req.vaddr.eq(0x0000_0060)
+
     yield Tick()
-    yield Tick()
-    yield Tick()
-    yield Tick()
-    yield Tick()
+    yield dut.fetch_req.vaddr.eq(0x0000_0080)
+
     yield Tick()
 
 class FetchUnitTests(unittest.TestCase):
@@ -31,7 +37,7 @@ class FetchUnitTests(unittest.TestCase):
 
     def test_fetch_simple(self):
         tb = Testbench(
-            FetchUnit(EmberParams), 
+            FetchUnitHarness(EmberParams), 
             tb_fetch_simple,
             "tb_fetch_simple"
         )

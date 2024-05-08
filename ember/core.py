@@ -10,28 +10,27 @@ from ember.param import *
 
 from ember.fetch import *
 from ember.decode import *
-from ember.cache import *
+from ember.cache.l1i import *
+from ember.cache.itlb import *
 
 
 
 class EmberCore(Component):
-    ibus: WishboneInterface(
-        addr_width=30, 
-        data_width=32, 
-        granularity=32, 
-        features=["err"]
-    )
-
-
 
     def __init__(self, param: EmberParams):
         self.p = param
-        super().__init__()
+        signature = Signature({
+        })
+        super().__init__(signature)
 
     def elaborate(self, platform):
         m = Module()
 
-        #ifu = m.submodules.ifu = FetchUnit(self.p)
+        m.submodules.l1i = l1i = L1ICache(self.p)
+        m.submodules.itlb = itlb = L1ICacheTLB(self.p.l1i)
+        m.submodules.l1i_fill = l1i_fill = L1IFillUnit(self.p)
+        m.submodules.ifu = ifu = FetchUnit(self.p)
+
         #fetch_addr = Signal(self.p.rv.xlen, reset=self.p.reset_vector)
         #fetch_addr_v = Signal(reset=True)
         #m.d.sync += addr.eq(addr + 0x20)

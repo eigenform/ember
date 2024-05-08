@@ -1,7 +1,7 @@
 Return Address Predictor
 ========================
 
-The return address predictor (RAP) is a memory device used to [speculatively]
+The **return address predictor** (RAP) is a memory device used to [speculatively]
 track the value of a register (the **link register**) which links the target 
 of a return instruction to the most-recent previous call instruction. 
 

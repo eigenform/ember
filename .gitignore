@@ -3,5 +3,8 @@ pdm.lock
 __pycache__/
 *.egg-info/
 *.pyc
+*.elf
+*.bin
+*.o
 tmp/
 .venv/

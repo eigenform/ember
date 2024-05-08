@@ -4,7 +4,28 @@ from amaranth.lib.data import *
 from amaranth.lib.wiring import *
 from amaranth.utils import log2_int, exact_log2
 
+from ember.param import *
 from ember.axi import *
+
+class MockIBusController(Component):
+    """ Temporary logic for moving instruction bytes into the core. 
+
+    This is only intended to be used with testbenches. 
+    """
+    def __init__(self, param: EmberParams):
+        self.p = param
+        signature = Signature({
+            "addr": Out(32),
+            "data": In(self.p.l1i.line_layout),
+        })
+        super().__init__(signature)
+
+    def elaborate(self, platform):
+        m = Module()
+
+        return m
+
+
 
 
 class IBusControllerAXI(Component):

@@ -18,15 +18,24 @@ class FetchRequest(Signature):
         super().__init__({
             "ready": In(1),
             "valid": Out(1),
-            "vaddr": Out(p.rv.xlen),
+            "vaddr": Out(32),
+            "passthru": Out(1),
         })
+
+class FetchResponseStatus(Enum):
+    NONE   = 0
+    L1_HIT = 1
+    L1_MISS = 2
+    TLB_MISS = 3
 
 class FetchResponse(Signature):
     """ Response to a fetch request.  """
     def __init__(self, p: EmberParams):
         super().__init__({
-            "valid": In(1),
-            "data": In(p.l1i.line_layout),
+            "valid": Out(1),
+            "vaddr": Out(32),
+            "sts": Out(FetchResponseStatus),
+            "data": Out(p.l1i.line_layout),
         })
 
 
@@ -44,172 +53,182 @@ class FetchUnit(Component):
 
         self.stage = PipelineStages()
         self.stage.add_stage(1, {
-            "req_vaddr": unsigned(self.p.rv.xlen),
+            "req_vaddr": unsigned(32),
+            "passthru": unsigned(1),
         })
         self.stage.add_stage(2, {
-            "req_vaddr": unsigned(self.p.rv.xlen),
+            "req_vaddr": unsigned(32),
+            "passthru": unsigned(1),
         })
         self.stage.add_stage(3, {
-            "req_vaddr": unsigned(self.p.rv.xlen),
+            "req_vaddr": unsigned(32),
+            "passthru": unsigned(1),
         })
 
-
-
-
-
         signature = Signature({
-            # Connection to the ibus for L1I cache fills
-            "ibus": Out(WishboneSignature(
-                addr_width=30, 
-                data_width=32,
-                granularity=32,
-                features=["err", "cti", "bte"]
-            )),
-
-            # Connection to the ibus for TLB fills
-            "ibus_tlb": Out(WishboneSignature(
-                addr_width=30, 
-                data_width=32,
-                granularity=32,
-                features=["err", "cti", "bte"],
-            )),
-
             "req": In(FetchRequest(param)),
             "resp": Out(FetchResponse(param)),
 
-            # Updates to the 'satp' CSR percolate down into 
-            # any MMU logic encompassed by the fetch unit 
-            "satp_valid": In(1),
-            "satp": In(SatpSv32()),
+            "l1i_rp": Out(L1ICacheReadPort(param)),
+            "tlb_rp": Out(L1ICacheTLBReadPort(param.l1i)),
         })
         super().__init__(signature)
 
-    def elaborate(self, platform):
-        m = Module()
+    def elaborate_s0(self, m: Module):
+        """ Instruction Fetch - Stage #0
 
-        tlb = m.submodules.tlb = L1ICacheTLB(self.p.l1i)
-        l1i = m.submodules.l1i = L1ICache(self.p)
+        Drives inputs to the L1I arrays and to the TLB. 
+        Results from the L1I arrays and TLB are available on the next cycle. 
+        """
 
-        # =======================================================
-        # Keep track of impinging updates to the SATP CSR. 
-
-        satp = Signal(SatpSv32())
-        next_satp = Signal(SatpSv32())
-        satp_update = Signal()
-        m.d.sync += [
-            next_satp.eq(self.satp),
-            satp_update.eq(self.satp_valid),
-        ]
-
-        # =======================================================
-        # Wires for the L1 read port response (available at stage 1)
-        l1_tag_data = Array(
-            Signal(self.p.l1i.tag_layout, name=f"l1_tag_data{idx}") 
-            for idx in range(self.p.l1i.num_ways)
+        m.d.sync += Print(Format(
+            "[ifu_s0] Fetch request for {:08x}", 
+            self.req.vaddr)
         )
-        l1_line_data = Array(
-            Signal(self.p.l1i.line_layout, name=f"l1_line_data{idx}") 
-            for idx in range(self.p.l1i.num_ways)
-        )
-        l1_data_valid = Signal()
-        for way_idx in range(self.p.l1i.num_ways):
-            m.d.comb += [
-                l1_data_valid.eq(l1i.rp.resp.valid),
-                l1_tag_data[way_idx].eq(l1i.rp.resp.tag_data[way_idx]),
-                l1_line_data[way_idx].eq(l1i.rp.resp.line_data[way_idx]),
-            ]
-
-
-        # =======================================================
-        # Stage 0. 
-        # - Drive inputs to the tag/data arrays. 
-        # - Drive inputs to the TLB. 
-        #
-        # NOTE: Do we want to unify the incoming virtual address 
-        # into a single layout instead of using two different layouts
-        # for the L1I/TLB logic here? 
-
-        # Tell the user if the pipeline is stalled
-        m.d.comb += [
-            self.req.ready.eq(self.stage[1].ready),
-        ]
 
         # Connect the fetch interface inputs to the TLB read port inputs.
-        tlb_vaddr = Signal(VirtualAddressSv32())
-        m.d.comb += [
-            tlb_vaddr.eq(self.req.vaddr),
-            tlb.req.valid.eq(self.req.valid),
-            tlb.req.vpn.eq(tlb_vaddr.vpn),
-        ]
+        # Passthrough requests do not use the TLB read port. 
+        tlb_vaddr = View(VirtualAddressSv32(), self.req.vaddr)
+        with m.If(self.req.passthru):
+            m.d.comb += [
+                self.tlb_rp.req.valid.eq(0),
+                self.tlb_rp.req.vpn.eq(0),
+            ]
+        with m.Else():
+            m.d.comb += [
+                self.tlb_rp.req.valid.eq(self.req.valid),
+                self.tlb_rp.req.vpn.eq(tlb_vaddr.vpn),
+            ]
+
         # Connect the fetch interface inputs to the cache read port inputs.
-        l1i_vaddr = Signal(self.p.l1i.vaddr_layout)
+        l1i_vaddr = View(self.p.l1i.vaddr_layout, self.req.vaddr)
         m.d.comb += [
-            l1i_vaddr.eq(self.req.vaddr),
-            l1i.rp.req.valid.eq(self.req.valid),
-            l1i.rp.req.set.eq(l1i_vaddr.idx),
+            self.l1i_rp.req.valid.eq(self.req.valid),
+            self.l1i_rp.req.set.eq(l1i_vaddr.idx),
         ]
 
         # Pass the fetch request to stage 1
         m.d.sync += [
             self.stage[1].valid.eq(self.req.valid),
             self.stage[1].req_vaddr.eq(self.req.vaddr),
+            self.stage[1].passthru.eq(self.req.passthru),
         ]
 
-        # =======================================================
-        # Stage 1. 
-        # - Read port response from the tag/data arrays is available. 
-        # - TLB response is available. 
-        #
-        # - On TLB miss, start a PTW transaction and stall
-        # - On TLB hit, use the PPN to select a matching cache way
-        # - On cache miss, start a fill transaction and stall
-        # - On cache hit, forward data to fetch response
-        
-        tlb_hit  = (tlb.resp.valid & self.stage[1].valid)
-        tlb_miss = (~tlb.resp.valid & self.stage[1].valid)
-        tlb_ppn = tlb.resp.ppn
-        with m.If(self.stage[1].valid):
-            m.d.sync += Assert(l1_data_valid, "L1 tag/data output invalid?")
+    def elaborate_s1(self, m: Module): 
+        """ Instruction Fetch - Stage #1 
 
+        1. If we're handling a passthrough request, output from TLB 
+           will be invalid. Instead, we use the VPN to select a matching
+           cache way. 
 
+        2. Valid output from the TLB will either indicate a hit or a miss. 
+           When a hit occurs, use the PPN to select a matching cache way. 
+           When a miss occurs, send a request to the PTW. 
+
+        3. If a matching cache way is found, respond with the hitting line. 
+           If no match occurs, send a request to the L1I fill interface. 
+
+        """
+
+        tlb_hit  = (self.tlb_rp.resp.valid & self.tlb_rp.resp.hit)
+        tlb_miss = (self.tlb_rp.resp.valid & ~self.tlb_rp.resp.hit)
+        tlb_pte  = self.tlb_rp.resp.pte
+
+        # Drive all of the tag data to the way selector logic. 
+        view = View(VirtualAddressSv32(), self.stage[1].req_vaddr)
+        m.submodules.way_select = way_select = \
+                L1IWaySelect(self.p.l1i.num_ways, self.p.l1i.tag_layout)
+        i_tag = Mux(self.stage[1].passthru, view.vpn, tlb_pte.ppn)
         m.d.comb += [
-            self.stage[1].ready.eq(tlb_hit),
+            way_select.i_tag.eq(i_tag),
+            way_select.i_valid.eq(~tlb_miss),
+        ]
+        m.d.comb += [
+            way_select.i_tags[way_idx].eq(self.l1i_rp.resp.tag_data[way_idx])
+            for way_idx in range(self.p.l1i.num_ways)
         ]
 
-        way_match_arr = Array(
-            Signal() 
+        tgt_hit = (way_select.o_hit)
+        tgt_way = way_select.o_way
+        l1_line_data = Array(
+            self.l1i_rp.resp.line_data[way_idx]
             for way_idx in range(self.p.l1i.num_ways)
         )
-        #for way_idx in range(self.p.l1i.num_ways):
-        #    m.d.comb += [
-        #        way_match[way_idx].eq(
-        #            Mux(tlb_hit, (tlb_ppn == l1_tag_data[way_idx]), 0)
-        #        ),
+        tgt_line = Mux(tgt_hit, l1_line_data[tgt_way], 0)
+        sts = Signal(FetchResponseStatus)
+        m.d.sync += [
+            self.resp.valid.eq(self.stage[1].valid),
+        ]
+        with m.If(tgt_hit):
+            m.d.sync += [
+                self.resp.sts.eq(FetchResponseStatus.L1_HIT),
+                self.resp.vaddr.eq(self.stage[1].req_vaddr),
+                self.resp.data.eq(tgt_line),
+                self.resp.valid.eq(1),
+            ]
+            m.d.comb += sts.eq(FetchResponseStatus.L1_HIT)
+        with m.Elif(~tgt_hit):
+            m.d.comb += sts.eq(FetchResponseStatus.L1_MISS)
+        with m.Elif(tlb_miss):
+            m.d.comb += sts.eq(FetchResponseStatus.TLB_MISS)
+
+
+
+
+    def elaborate(self, platform):
+        m = Module()
+
+        self.elaborate_s0(m)
+        self.elaborate_s1(m)
+
+        #with m.If(tgt_hit):
+        #    m.d.sync += [
+        #        Print(Format("[ifu_s1] L1I hit for {:08x} in way {}", 
+        #            self.stage[1].req_vaddr, tgt_way)),
+        #        self.resp.vaddr.eq(self.stage[1].req_vaddr),
+        #        self.resp.data.eq(l1_line_data[tgt_way]),
+        #        self.resp.valid.eq(1),
+        #    ]
+        #with m.Else():
+        #    m.d.sync += [
+        #        Print(Format("[ifu_s1] L1I miss for {:08x}",
+        #            self.stage[1].req_vaddr)),
+        #        self.resp.vaddr.eq(self.stage[1].req_vaddr),
+        #        self.resp.data.eq(0),
+        #        self.resp.valid.eq(1),
         #    ]
 
-        m.submodules.way_match_encoder = way_match_encoder = \
-                PriorityEncoder(exact_log2(self.p.l1i.num_ways))
-        way_match_hit  = (~way_match_encoder.n & self.req.valid)
-        way_match_idx  = way_match_encoder.o
-        way_match_data = Mux(way_match_hit, l1_line_data[way_match_idx], 0)
-        m.d.comb += [
-            way_match_encoder.i.eq(Cat(*way_match_arr)),
-        ]
-        
-        ## Output to ibus interface
-        #fill_adr = Signal(self.p.rv.xlen - 2)
-        #m.d.comb += [
-        #    self.ibus.adr.eq(fill_adr),
-        #    self.ibus.cyc.eq(0),
-        #    self.ibus.stb.eq(0),
-        #    self.ibus.sel.eq(0),
-        #    self.ibus.cti.eq(CycleType.INCR_BURST),
-        #    self.ibus.bte.eq(BurstTypeExt.LINEAR),
 
-        #    self.ibus.dat_w.eq(0),
-        #    self.ibus.we.eq(0),
-        #]
+        #with m.If(tlb_miss):
+        #    m.d.sync += Print("iTLB miss, PTW unimplemented!")
+        #    m.d.sync += Assert(~way_select.o_valid,
+        #        "Way select output cannot be valid on TLB miss"
+        #    )
+
+       
+        return m
+
+class FetchUnitHarness(Component):
+    def __init__(self, param: EmberParams):
+        self.p = param
+        signature = Signature({
+            "fetch_req": In(FetchRequest(param)),
+            "fetch_resp": Out(FetchResponse(param)),
+        })
+        super().__init__(signature)
+    def elaborate(self, platform):
+        m = Module()
+
+        ifu = m.submodules.ifu = FetchUnit(self.p)
+        l1i = m.submodules.l1i = L1ICache(self.p)
+        itlb = m.submodules.itlb = L1ICacheTLB(self.p.l1i)
+
+        connect(m, ifu.l1i_rp, l1i.rp)
+        connect(m, ifu.tlb_rp, itlb.rp)
+        connect(m, ifu.req, flipped(self.fetch_req))
+        connect(m, ifu.resp, flipped(self.fetch_resp))
 
         return m
+
 
 
