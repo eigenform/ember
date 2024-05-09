@@ -16,3 +16,6 @@ with open(".gitignore") as f:
 extensions = [
     "sphinx.ext.autodoc",
 ]
+
+rst_prolog = """
+"""

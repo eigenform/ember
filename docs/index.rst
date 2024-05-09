@@ -4,8 +4,7 @@ EMBR (Ember)
 It's a computer.
 
 .. note:: 
-   You should not expect this to be synthesizable [yet]. 
-
+   You should not expect this to be synthesizable [yet].
 
 ------
 
@@ -26,10 +25,17 @@ It's a computer.
    :caption: Module-level Reference
    :titlesonly:
 
+   modules/common
    modules/rap
    modules/l1i
    modules/itlb
    modules/fetch
    modules/decode
    modules/predecode
+
+.. toctree::
+   :caption: Miscellania
+   :titlesonly:
+
+   glossary
 
