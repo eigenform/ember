@@ -53,12 +53,19 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Module-level Reference</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="modules/common.html">Common Components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/rap.html">Return Address Predictor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/l1i.html">L1 Instruction Cache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/itlb.html">L1 Instruction Cache TLB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/ifill.html">L1 Instruction Cache Fill</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/fetch.html">Instruction Fetch</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/decode.html">Instruction Decode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/predecode.html">Instruction Predecode</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Miscellania</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
 </ul>
 
         </div>
@@ -97,6 +104,7 @@
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
+ | <a href="#Q"><strong>Q</strong></a>
  | <a href="#R"><strong>R</strong></a>
  
 </div>
@@ -133,11 +141,22 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/fetch.html#ember.fetch.FetchUnit.elaborate_s0">elaborate_s0() (ember.fetch.FetchUnit method)</a>
+</li>
+      <li><a href="modules/fetch.html#ember.fetch.FetchUnit.elaborate_s1">elaborate_s1() (ember.fetch.FetchUnit method)</a>
+</li>
       <li>
     ember.bp.rap
 
       <ul>
         <li><a href="modules/rap.html#module-ember.bp.rap">module</a>
+</li>
+      </ul></li>
+      <li>
+    ember.cache.ifill
+
+      <ul>
+        <li><a href="modules/ifill.html#module-ember.cache.ifill">module</a>
 </li>
       </ul></li>
       <li>
@@ -155,19 +174,33 @@
 </li>
       </ul></li>
       <li>
+    ember.common.queue
+
+      <ul>
+        <li><a href="modules/common.html#module-ember.common.queue">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
     ember.decode
 
       <ul>
         <li><a href="modules/decode.html#module-ember.decode">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     ember.fetch
 
       <ul>
         <li><a href="modules/fetch.html#module-ember.fetch">module</a>
+</li>
+      </ul></li>
+      <li>
+    ember.ftq
+
+      <ul>
+        <li><a href="modules/ftq.html#module-ember.ftq">module</a>
 </li>
       </ul></li>
       <li>
@@ -203,11 +236,27 @@
 </li>
       <li><a href="modules/fetch.html#ember.fetch.FetchRequest">FetchRequest (class in ember.fetch)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/fetch.html#ember.fetch.FetchResponse">FetchResponse (class in ember.fetch)</a>
 </li>
+      <li><a href="modules/fetch.html#ember.fetch.FetchResponseStatus">FetchResponseStatus (class in ember.fetch)</a>
+</li>
+      <li><a href="modules/ftq.html#ember.ftq.FetchTargetQueue">FetchTargetQueue (class in ember.ftq)</a>
+</li>
       <li><a href="modules/fetch.html#ember.fetch.FetchUnit">FetchUnit (class in ember.fetch)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/fetch.html#ember.fetch.FetchUnitHarness">FetchUnitHarness (class in ember.fetch)</a>
+</li>
+      <li><a href="modules/ftq.html#ember.ftq.FTQAllocRequest">FTQAllocRequest (class in ember.ftq)</a>
+</li>
+      <li><a href="modules/ftq.html#ember.ftq.FTQEntry">FTQEntry (class in ember.ftq)</a>
+</li>
+      <li><a href="modules/ftq.html#ember.ftq.FTQEntrySource">FTQEntrySource (class in ember.ftq)</a>
+</li>
+      <li><a href="modules/ftq.html#ember.ftq.FTQEntryState">FTQEntryState (class in ember.ftq)</a>
+</li>
+      <li><a href="modules/ftq.html#ember.ftq.FTQIndex">FTQIndex (class in ember.ftq)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -259,9 +308,11 @@
 </li>
       <li><a href="modules/itlb.html#ember.cache.itlb.L1ICacheTLBFillRequest">L1ICacheTLBFillRequest (class in ember.cache.itlb)</a>
 </li>
+      <li><a href="config/param.html#ember.param.L1ICacheTLBParams">L1ICacheTLBParams (class in ember.param)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="config/param.html#ember.param.L1ICacheTLBParams">L1ICacheTLBParams (class in ember.param)</a>
+      <li><a href="modules/itlb.html#ember.cache.itlb.L1ICacheTLBReadPort">L1ICacheTLBReadPort (class in ember.cache.itlb)</a>
 </li>
       <li><a href="modules/itlb.html#ember.cache.itlb.L1ICacheTLBRequest">L1ICacheTLBRequest (class in ember.cache.itlb)</a>
 </li>
@@ -273,11 +324,15 @@
 </li>
       <li><a href="modules/l1i.html#ember.cache.l1i.L1ICacheWriteResponse">L1ICacheWriteResponse (class in ember.cache.l1i)</a>
 </li>
-      <li><a href="modules/l1i.html#ember.cache.l1i.L1IFillRequest">L1IFillRequest (class in ember.cache.l1i)</a>
+      <li><a href="modules/ifill.html#ember.cache.ifill.L1IFillRequest">L1IFillRequest (class in ember.cache.ifill)</a>
 </li>
-      <li><a href="modules/l1i.html#ember.cache.l1i.L1IFillUnit">L1IFillUnit (class in ember.cache.l1i)</a>
+      <li><a href="modules/ifill.html#ember.cache.ifill.L1IFillResponse">L1IFillResponse (class in ember.cache.ifill)</a>
 </li>
-      <li><a href="modules/l1i.html#ember.cache.l1i.L1IWaySelector">L1IWaySelector (class in ember.cache.l1i)</a>
+      <li><a href="modules/ifill.html#ember.cache.ifill.L1IFillStatus">L1IFillStatus (class in ember.cache.ifill)</a>
+</li>
+      <li><a href="modules/ifill.html#ember.cache.ifill.L1IFillUnit">L1IFillUnit (class in ember.cache.ifill)</a>
+</li>
+      <li><a href="modules/l1i.html#ember.cache.l1i.L1IWaySelect">L1IWaySelect (class in ember.cache.l1i)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -293,13 +348,19 @@
       <ul>
         <li><a href="modules/rap.html#module-ember.bp.rap">ember.bp.rap</a>
 </li>
+        <li><a href="modules/ifill.html#module-ember.cache.ifill">ember.cache.ifill</a>
+</li>
         <li><a href="modules/itlb.html#module-ember.cache.itlb">ember.cache.itlb</a>
 </li>
         <li><a href="modules/l1i.html#module-ember.cache.l1i">ember.cache.l1i</a>
 </li>
+        <li><a href="modules/common.html#module-ember.common.queue">ember.common.queue</a>
+</li>
         <li><a href="modules/decode.html#module-ember.decode">ember.decode</a>
 </li>
         <li><a href="modules/fetch.html#module-ember.fetch">ember.fetch</a>
+</li>
+        <li><a href="modules/ftq.html#module-ember.ftq">ember.ftq</a>
 </li>
         <li><a href="config/param.html#module-ember.param">ember.param</a>
 </li>
@@ -315,6 +376,14 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="config/isa.html#ember.riscv.inst.RvInstMatch.num_effective_bits">num_effective_bits() (ember.riscv.inst.RvInstMatch method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Q">Q</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/common.html#ember.common.queue.Queue">Queue (class in ember.common.queue)</a>
 </li>
   </ul></td>
 </tr></table>

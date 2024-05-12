@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Using this Repository &mdash; Ember</title>
+  <title>Glossary &mdash; Ember</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -21,8 +21,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Ember Parameters" href="config/param.html" />
-    <link rel="prev" title="EMBR (Ember)" href="index.html" /> 
+    <link rel="prev" title="Instruction Predecode" href="modules/predecode.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -46,8 +45,8 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Build Process</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Using this Repository</a></li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Using this Repository</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Core Configuration</span></p>
 <ul>
@@ -67,8 +66,8 @@
 <li class="toctree-l1"><a class="reference internal" href="modules/predecode.html">Instruction Predecode</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Miscellania</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Glossary</a></li>
 </ul>
 
         </div>
@@ -85,9 +84,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Using this Repository</li>
+      <li class="breadcrumb-item active">Glossary</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="_sources/usage.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/glossary.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -95,48 +94,17 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="using-this-repository">
-<h1>Using this Repository<a class="headerlink" href="#using-this-repository" title="Permalink to this heading"></a></h1>
-<p>This build environment uses <a class="reference external" href="https://pdm-project.org">PDM</a> in an attempt to
-make managing dependencies on <a class="reference external" href="https://github.com/amaranth-lang">Amaranth</a>
-somewhat simpler.</p>
-<section id="setup-arch-linux">
-<h2>Setup (Arch Linux)<a class="headerlink" href="#setup-arch-linux" title="Permalink to this heading"></a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Install pipx and pdm</span>
-$<span class="w"> </span>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>python-pipx
-$<span class="w"> </span>pipx<span class="w"> </span>install<span class="w"> </span>pdm
-
-<span class="c1"># Clone this repository and install dependencies</span>
-$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/eigenform/ember<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>ember
-$<span class="w"> </span>pdm<span class="w"> </span>install
-</pre></div>
-</div>
-</section>
-<section id="build-scripts">
-<h2>Build Scripts<a class="headerlink" href="#build-scripts" title="Permalink to this heading"></a></h2>
-<p>You can get a list of all available build scripts like this:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get the list of scripts used for testing/building the project</span>
-$<span class="w"> </span>pdm<span class="w"> </span>run<span class="w"> </span>--list
-</pre></div>
-</div>
-<p>At this point in the project, we’re really only concerned with running tests
-and rendering some components into a Verilog representation:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run unit tests</span>
-$<span class="w"> </span>pdm<span class="w"> </span>test-code
-
-<span class="c1"># Emit Verilog</span>
-$<span class="w"> </span>pdm<span class="w"> </span>emit-verilog
-</pre></div>
-</div>
-</section>
+  <section id="glossary">
+<h1>Glossary<a class="headerlink" href="#glossary" title="Permalink to this heading"></a></h1>
+<dl class="simple glossary">
+</dl>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="EMBR (Ember)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="config/param.html" class="btn btn-neutral float-right" title="Ember Parameters" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="modules/predecode.html" class="btn btn-neutral float-left" title="Instruction Predecode" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

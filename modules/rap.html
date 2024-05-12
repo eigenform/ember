@@ -21,8 +21,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="L1 Instruction Cache" href="l1i.html" />
-    <link rel="prev" title="Supported Instructions" href="../config/isa.html" /> 
+    <link rel="next" title="Fetch Target Queue" href="ftq.html" />
+    <link rel="prev" title="Common Components" href="common.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -56,12 +56,19 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Module-level Reference</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="common.html">Common Components</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Return Address Predictor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="l1i.html">L1 Instruction Cache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="itlb.html">L1 Instruction Cache TLB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ifill.html">L1 Instruction Cache Fill</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fetch.html">Instruction Fetch</a></li>
 <li class="toctree-l1"><a class="reference internal" href="decode.html">Instruction Decode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="predecode.html">Instruction Predecode</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Miscellania</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
 </ul>
 
         </div>
@@ -90,7 +97,7 @@
              
   <section id="return-address-predictor">
 <h1>Return Address Predictor<a class="headerlink" href="#return-address-predictor" title="Permalink to this heading"></a></h1>
-<p>The return address predictor (RAP) is a memory device used to [speculatively]
+<p>The <strong>return address predictor</strong> (RAP) is a memory device used to [speculatively]
 track the value of a register (the <strong>link register</strong>) which links the target
 of a return instruction to the most-recent previous call instruction.</p>
 <p>In the RISC-V ISA, call and return instructions are implemented by expecting
@@ -163,8 +170,8 @@ that implements a stack.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../config/isa.html" class="btn btn-neutral float-left" title="Supported Instructions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="l1i.html" class="btn btn-neutral float-right" title="L1 Instruction Cache" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="common.html" class="btn btn-neutral float-left" title="Common Components" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ftq.html" class="btn btn-neutral float-right" title="Fetch Target Queue" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

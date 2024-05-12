@@ -21,7 +21,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Instruction Fetch" href="fetch.html" />
+    <link rel="next" title="L1 Instruction Cache Fill" href="ifill.html" />
     <link rel="prev" title="L1 Instruction Cache" href="l1i.html" /> 
 </head>
 
@@ -56,12 +56,19 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Module-level Reference</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="common.html">Common Components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="rap.html">Return Address Predictor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="l1i.html">L1 Instruction Cache</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">L1 Instruction Cache TLB</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ifill.html">L1 Instruction Cache Fill</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fetch.html">Instruction Fetch</a></li>
 <li class="toctree-l1"><a class="reference internal" href="decode.html">Instruction Decode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="predecode.html">Instruction Predecode</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Miscellania</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
 </ul>
 
         </div>
@@ -95,7 +102,7 @@ physically-tagged (VIPT).
 This means that the physical address associated with the requested cacheline
 must be resolved in order to determine whether or not it is present in any of
 the L1I cache ways.</p>
-<p>The L1I translation lookaside buffer (TLB) is a small cache for page table
+<p>The <strong>L1I translation lookaside buffer</strong> (TLB) is a small cache for page table
 entries which is accessed in parallel with the L1I cache’s tag and data arrays.
 When the L1I TLB is able to provide a physical page number, L1I tag matching
 and way selection can proceed without any additional latency. Otherwise,
@@ -106,7 +113,9 @@ L1I cache access to incur substantial latency.</p>
 <dt class="sig sig-object py" id="ember.cache.itlb.L1ICacheTLB">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.itlb.</span></span><span class="sig-name descname"><span class="pre">L1ICacheTLB</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.itlb.L1ICacheTLB" title="Permalink to this definition"></a></dt>
 <dd><p>L1 instruction cache TLB (translation lookaside buffer).</p>
-<p>This is a small fully-associative cache for page table entries.</p>
+<p>This is a small fully-associative cache for page table entries. 
+Each entry in the TLB associates a virtual page number (VPN) to 
+a page table entry (PTE).</p>
 <section id="replacement-policy">
 <h2>Replacement Policy<a class="headerlink" href="#replacement-policy" title="Permalink to this heading"></a></h2>
 <p>Currently, the replacement policy is <em>random</em>. 
@@ -121,6 +130,11 @@ pseudo least-recently used (PLRU) policy.</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.itlb.</span></span><span class="sig-name descname"><span class="pre">L1ICacheTLBFillRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.L1ICacheParams" title="ember.param.L1ICacheParams"><span class="pre">L1ICacheParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.itlb.L1ICacheTLBFillRequest" title="Permalink to this definition"></a></dt>
 <dd><p>A request to write an entry into the L1I TLB.</p>
 </dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.cache.itlb.L1ICacheTLBReadPort">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.itlb.</span></span><span class="sig-name descname"><span class="pre">L1ICacheTLBReadPort</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.L1ICacheParams" title="ember.param.L1ICacheParams"><span class="pre">L1ICacheParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.itlb.L1ICacheTLBReadPort" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="ember.cache.itlb.L1ICacheTLBRequest">
@@ -142,7 +156,7 @@ for the provided virtual page number.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="l1i.html" class="btn btn-neutral float-left" title="L1 Instruction Cache" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="fetch.html" class="btn btn-neutral float-right" title="Instruction Fetch" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="ifill.html" class="btn btn-neutral float-right" title="L1 Instruction Cache Fill" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
