@@ -27,8 +27,10 @@ It's a computer.
 
    modules/common
    modules/rap
+   modules/ftq
    modules/l1i
    modules/itlb
+   modules/ifill
    modules/fetch
    modules/decode
    modules/predecode

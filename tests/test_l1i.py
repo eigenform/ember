@@ -4,7 +4,9 @@ import unittest
 from ember.param import *
 from ember.cache.l1i import *
 from ember.cache.itlb import *
+from ember.cache.ifill import *
 from ember.sim.common import Testbench
+from ember.sim.fakeram import *
 
 from amaranth import *
 from amaranth.sim import *
@@ -126,6 +128,31 @@ def tb_l1icache_rw(dut: L1ICache):
     assert tag_data[1] == 0x4
     assert line_data[1] == [1,2,3,4]
 
+def tb_l1ifill(dut: L1IFillUnit):
+    ram = FakeRam(0x0000_1000)
+    ram.write_bytes(0, bytearray([i for i in range(1, 256)]))
+
+    yield dut.req.addr.eq(0x0000_0000)
+    yield dut.req.way.eq(1)
+    yield dut.req.valid.eq(1)
+
+    yield Tick()
+    yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
+    ready = yield dut.sts.ready
+    assert ready == 0
+
+    yield Tick()
+    yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
+    ready = yield dut.sts.ready
+    assert ready == 0
+
+    yield Tick()
+    yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
+    ready = yield dut.sts.ready
+    assert ready == 1
+
+    yield Tick()
+    yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
 
 class L1ICacheTests(unittest.TestCase):
 
@@ -155,6 +182,14 @@ class L1ICacheTests(unittest.TestCase):
             L1ICache(EmberParams),
             tb_l1icache_rw,
             "tb_l1icache_rw"
+        )
+        tb.run()
+
+    def test_l1ifill(self):
+        tb = Testbench(
+            L1IFillUnit(EmberParams),
+            tb_l1ifill,
+            "tb_l1ifill"
         )
         tb.run()
 

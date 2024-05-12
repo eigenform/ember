@@ -8,6 +8,7 @@ from amaranth.utils import ceil_log2
 from ember.riscv.inst import *
 from ember.riscv.paging import *
 from ember.uarch.mop import *
+from ember.uarch.addr import *
 
 #class Parameters(object):
 #    def __init__(self, **kwargs):
@@ -110,6 +111,8 @@ class FetchParams(object):
 
     """
     def __init__(self, rv: RiscvParams, width: int): 
+        # Number of Fetch Target Queue entries
+        self.ftq_depth  = 8
         # Number of *instructions* fetched per cycle. 
         self.width = width
         # Number of *bytes* fetched per cycle. 
@@ -134,6 +137,9 @@ class EmberParams:
     construct and override while elaborating the design.
     """
 
+    # The width of the instruction pipeline (in number of instructions)
+    superscalar_width = 4
+
     # The set of supported RISC-V instructions
     inst: RvInstGroup   = RV32I_BASE_SET
     # The set of supported macro-ops
@@ -142,8 +148,26 @@ class EmberParams:
     # RISC-V ISA parameters
     rv = RiscvParams()
 
-    # The width of the instruction pipeline (in number of instructions)
-    superscalar_width = 4
+    # L1I cache parameters
+    l1i = L1ICacheParams(rv,
+        num_sets=32,
+        num_ways=2,
+        word_width=rv.xlen_bits,
+        line_depth=superscalar_width,
+    )
+
+    # Virtual address layout
+    vaddr = VirtualAddress(
+        l1i_line_bytes=l1i.line_bytes,
+        l1i_num_sets=l1i.num_sets
+    )
+
+    # Physical address layout
+    paddr = PhysicalAddress(
+        l1i_line_bytes=l1i.line_bytes,
+        l1i_num_sets=l1i.num_sets
+    )
+
 
     # Instruction fetch parameters
     fetch = FetchParams(rv, width=superscalar_width)
@@ -153,13 +177,5 @@ class EmberParams:
 
     # Instruction bus parameters
     ibus = InstructionBusParams()
-
-    # L1I cache parameters
-    l1i = L1ICacheParams(rv,
-        num_sets=32,
-        num_ways=2,
-        word_width=rv.xlen_bits,
-        line_depth=fetch.width,
-    )
 
 

@@ -15,3 +15,7 @@ class RvEncodingUnitTests(unittest.TestCase):
         for name, mop in EmberParams().mops.items():
             c = mop.as_const()
 
+    #def test_vaddr_layout(self):
+    #    vaddr = Signal(EmberParams().vaddr)
+    #    print(vaddr.sv32)
+

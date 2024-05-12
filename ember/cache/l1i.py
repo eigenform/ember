@@ -237,16 +237,6 @@ class L1ICache(Component):
         return m   
 
 
-
-class L1IFillRequest(Signature):
-    """ L1 instruction cache fill request """
-    def __init__(self, p: EmberParams):
-        super().__init__({
-            "en": In(1),
-            "paddr": In(p.rv.xlen),
-
-        })
-
 class L1IWaySelect(Component):
     def __init__(self, num_ways: int, tag_layout: Layout):
         self.num_ways = num_ways
@@ -284,31 +274,5 @@ class L1IWaySelect(Component):
         ]
  
         return m
-
-
-
-
-class L1IFillUnit(Component):
-    def __init__(self, param: EmberParams):
-        self.p = param
-        signature = Signature({
-            "ready": Out(1),
-            "l1i_wp": Out(L1ICacheWritePort(param)),
-
-            # Connection to the ibus for L1I cache fills
-            "ibus": Out(WishboneSignature(
-                addr_width=30, 
-                data_width=32,
-                granularity=32,
-                features=["err", "cti", "bte"]
-            )),
-
-        })
-        super().__init__(signature)
-
-    def elaborate(self, platform):
-        m = Module()
-        return m
-
 
 
