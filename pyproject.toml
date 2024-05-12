@@ -2,6 +2,8 @@
 name = "ember"
 version = "0.0.0"
 description = ""
+authors = [{name = "eigenform"}]
+readme = "README.md"
 
 requires-python = "~=3.8"
 dependencies = [
@@ -9,8 +11,16 @@ dependencies = [
 	"amaranth-soc@git+https://github.com/amaranth-lang/amaranth-soc",
 ]
 
+[tool.pdm]
+ignore_package_warnings = ["sphinx*", "alabaster"]
+
+
 [tool.pdm.build]
 includes = ["ember/"]
+excludes = ["rv32/", "tmp/"]
+
+[tool.setuptools.packages.find]
+exclude = ["rv32/", "tmp/"]
 
 [tool.pdm.dev-dependencies]
 docs = [
