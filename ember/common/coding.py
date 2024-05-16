@@ -1,5 +1,7 @@
 
 from amaranth import *
+from amaranth.utils import exact_log2, ceil_log2
+from ember.common import *
 
 # NOTE: At some point, amaranth.lib.coding will be deprecated. 
 # We can keep these around until we want to change them. 
@@ -179,3 +181,21 @@ class GrayDecoder(Elaboratable):
             rhs = rhs ^ self.i[i]
             m.d.comb += self.o[i].eq(rhs)
         return m
+
+class ChainedPriorityEncoder(Elaboratable):
+    """ A "chained" priority encoder selecting more than one bit.
+    """
+    def __init__(self, width: int, num_outputs: int):
+        self.width = width
+        self.num_outputs = num_outputs
+        self.i = Signal(width)
+        self.o = Array(Signal(width) for _ in range(num_outputs))
+        self.n = Array(Signal() for _ in range(num_outputs))
+
+    def elaborate(self, platform):
+        m = Module()
+        return m
+
+
+
+

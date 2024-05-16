@@ -48,6 +48,11 @@ class L1ICacheTLBParams(object):
         for (k, v) in kwargs.items():
             self.__setattr__(k, v)
 
+class L1IFillParams(object):
+    def __init__(self, **kwargs):
+        for (k, v) in kwargs.items():
+            self.__setattr__(k, v)
+
 
 class L1ICacheParams(object):
     """ L1 instruction cache parameters.
@@ -101,8 +106,13 @@ class L1ICacheParams(object):
 
         # TLB parameters
         self.tlb = L1ICacheTLBParams(
-            num_entries=16,
+            num_entries=8,
         )
+
+        self.fill = L1IFillParams(
+            num_mshr=2,
+        )
+
 
 class FetchParams(object):
     """ Instruction fetch parameters.

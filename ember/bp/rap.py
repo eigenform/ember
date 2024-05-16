@@ -6,8 +6,8 @@ from amaranth.utils import exact_log2
 
 from ember.common import *
 from ember.param import *
-from ember.cache.l1i import *
-from ember.cache.itlb import *
+from ember.front.l1i import *
+from ember.front.itlb import *
 from ember.uarch.mop import *
 
 class RapRequest(Signature):

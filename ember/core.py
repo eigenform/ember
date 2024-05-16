@@ -8,10 +8,10 @@ from amaranth_soc.wishbone import Interface as WishboneInterface
 from ember.common import *
 from ember.param import *
 
-from ember.fetch import *
+from ember.front.fetch import *
 from ember.decode import *
-from ember.cache.l1i import *
-from ember.cache.itlb import *
+from ember.front.l1i import *
+from ember.front.itlb import *
 
 
 

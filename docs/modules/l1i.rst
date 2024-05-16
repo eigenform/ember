@@ -1,7 +1,7 @@
 L1 Instruction Cache
 ====================
 
-.. automodule:: ember.cache.l1i
+.. automodule:: ember.front.l1i
    :members:
 
 

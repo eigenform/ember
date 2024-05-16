@@ -16,6 +16,6 @@ L1I cache access to incur substantial latency.
 
 --------
 
-.. automodule:: ember.cache.itlb
+.. automodule:: ember.front.itlb
    :members:
 

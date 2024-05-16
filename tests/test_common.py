@@ -13,6 +13,7 @@ from amaranth.back import verilog
 
 from ember.sim.common import *
 from ember.common import *
+from ember.common.coding import *
 
 class CommonUnitTests(unittest.TestCase):
     @staticmethod
@@ -22,6 +23,57 @@ class CommonUnitTests(unittest.TestCase):
             sim.add_testbench(fn)
             sim.run()
         return wrapper
+
+    def test_priority_mux(self):
+        m = PriorityMux(unsigned(4), 4)
+        #v = verilog.convert(m, emit_src=True, strip_internal_attrs=True)
+        #print(v)
+
+        @self.simulate(m)
+        def wow():
+            # Works? 
+            yield m.val[0].eq(0b0001)
+            yield m.val[1].eq(0b0010)
+            yield m.val[2].eq(0b0100)
+            yield m.val[3].eq(0b1000)
+            for i in range(4):
+                yield m.sel[0].eq(0)
+                yield m.sel[1].eq(0)
+                yield m.sel[2].eq(0)
+                yield m.sel[3].eq(0)
+                yield m.sel[i].eq(1)
+                res = yield m.output
+                #print("sel_{} => {:04b}".format(i, res))
+                assert res == (1 << i)
+
+            # Implicit default zero case
+            yield m.sel[0].eq(0)
+            yield m.sel[1].eq(0)
+            yield m.sel[2].eq(0)
+            yield m.sel[3].eq(0)
+            res = yield m.output
+            assert res == 0
+
+            yield m.sel[0].eq(1)
+            yield m.sel[1].eq(0)
+            yield m.sel[2].eq(0)
+            yield m.sel[3].eq(1)
+            res = yield m.output
+            assert res == (1 << 0)
+
+
+
+    def test_chained_priority_encoder(self):
+        dut = ChainedPriorityEncoder(8, 1)
+
+        @self.simulate(dut)
+        def it_works():
+            yield dut.i.eq(0b1000_0000)
+            o = yield dut.o[0]
+            n = yield dut.n[0]
+            assert o == 7
+            assert n == 0
+
 
     def test_popcount(self):
         m = Module()
@@ -39,7 +91,6 @@ class CommonUnitTests(unittest.TestCase):
             for x in range(32):
                 yield i_val.eq(x)
                 self.assertEqual((yield o_val), x.bit_count())
-
 
         @self.simulate(m1)
         def check_foo():

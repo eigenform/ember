@@ -7,8 +7,8 @@ from amaranth_soc.wishbone import CycleType, BurstTypeExt
 from ember.common import *
 from ember.common.pipeline import *
 from ember.param import *
-from ember.cache.l1i import *
-from ember.cache.itlb import *
+from ember.front.l1i import *
+from ember.front.itlb import *
 from ember.riscv.encoding import *
 from ember.uarch.mop import ControlFlowOp
 

@@ -199,8 +199,10 @@ class L1ICache(Component):
 
         # Read port outputs will be valid on the next cycle
         r_rp_output_valid = Signal()
+        r_wp_resp_valid = Signal()
         m.d.sync += [ 
-            r_rp_output_valid.eq(self.rp.req.valid)
+            r_rp_output_valid.eq(self.rp.req.valid),
+            r_wp_resp_valid.eq(self.wp.req.valid),
         ]
 
         # Read port inputs
@@ -228,6 +230,10 @@ class L1ICache(Component):
         m.d.comb += [ 
             self.rp.resp.valid.eq(r_rp_output_valid),
         ]
+        m.d.comb += [
+            self.wp.resp.valid.eq(r_wp_resp_valid),
+        ]
+
         for way_idx in range(self.p.l1i.num_ways):
             m.d.comb += [
                 self.rp.resp.tag_data[way_idx].eq(tag_arr.rp_data[way_idx]),
@@ -238,6 +244,12 @@ class L1ICache(Component):
 
 
 class L1IWaySelect(Component):
+    """ L1I cache way select logic. 
+
+    Given a set of tags ``i_tags`` across all ways in a set, determine which
+    way matches 
+
+    """
     def __init__(self, num_ways: int, tag_layout: Layout):
         self.num_ways = num_ways
         self.tag_layout = tag_layout
@@ -253,7 +265,7 @@ class L1IWaySelect(Component):
     def elaborate(self, platform):
         m = Module()
 
-        match_arr = Array(Signal() for way_idx in range(self.num_ways))
+        match_arr = Array(Signal(name=f"match_arr{way_idx}") for way_idx in range(self.num_ways))
         for way_idx in range(self.num_ways):
             m.d.comb += [
                 match_arr[way_idx].eq(
@@ -263,7 +275,7 @@ class L1IWaySelect(Component):
             ]
 
         m.submodules.match_encoder = match_encoder = \
-                PriorityEncoder(exact_log2(self.num_ways))
+                PriorityEncoder(self.num_ways)
         match_hit  = (~match_encoder.n & self.i_valid)
         match_idx  = match_encoder.o
         m.d.comb += [

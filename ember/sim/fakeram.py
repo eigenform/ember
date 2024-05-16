@@ -19,7 +19,7 @@ class FakeRamResponse(Signature):
         self.width_words = width_words
         super().__init__({
             "valid": Out(1),
-            "data": Out(ArrayLayout(unsigned(32), width_words)),
+            "data": Out(unsigned(32)).array(width_words),
         })
 
 class FakeRamInterface(Signature):
@@ -59,7 +59,8 @@ class FakeRam(object):
                 yield resp.data[idx].eq(data[idx])
             yield resp.valid.eq(True)
         else:
-            yield resp.data.eq(0)
+            for idx in range(self.width_words):
+                yield resp.data[idx].eq(0)
             yield resp.valid.eq(False)
 
         if req_valid != 0:
