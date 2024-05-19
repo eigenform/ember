@@ -11,6 +11,6 @@ requests for instruction fetch.
 
 
 
-.. automodule:: ember.ftq
+.. automodule:: ember.front.ftq
    :members:
 

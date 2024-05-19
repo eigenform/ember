@@ -58,10 +58,10 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="modules/common.html">Common Components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/rap.html">Return Address Predictor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules/ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/l1i.html">L1 Instruction Cache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/itlb.html">L1 Instruction Cache TLB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/ifill.html">L1 Instruction Cache Fill</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/fetch.html">Instruction Fetch</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/decode.html">Instruction Decode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modules/predecode.html">Instruction Predecode</a></li>
@@ -119,21 +119,6 @@
      <tr class="cg-1">
        <td></td>
        <td>&#160;&#160;&#160;
-       <a href="modules/ifill.html#module-ember.cache.ifill"><code class="xref">ember.cache.ifill</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="modules/itlb.html#module-ember.cache.itlb"><code class="xref">ember.cache.itlb</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
-       <a href="modules/l1i.html#module-ember.cache.l1i"><code class="xref">ember.cache.l1i</code></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-1">
-       <td></td>
-       <td>&#160;&#160;&#160;
        <a href="modules/common.html#module-ember.common.queue"><code class="xref">ember.common.queue</code></a></td><td>
        <em></em></td></tr>
      <tr class="cg-1">
@@ -144,12 +129,27 @@
      <tr class="cg-1">
        <td></td>
        <td>&#160;&#160;&#160;
-       <a href="modules/fetch.html#module-ember.fetch"><code class="xref">ember.fetch</code></a></td><td>
+       <a href="modules/fetch.html#module-ember.front.fetch"><code class="xref">ember.front.fetch</code></a></td><td>
        <em></em></td></tr>
      <tr class="cg-1">
        <td></td>
        <td>&#160;&#160;&#160;
-       <a href="modules/ftq.html#module-ember.ftq"><code class="xref">ember.ftq</code></a></td><td>
+       <a href="modules/ftq.html#module-ember.front.ftq"><code class="xref">ember.front.ftq</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="modules/ifill.html#module-ember.front.ifill"><code class="xref">ember.front.ifill</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="modules/itlb.html#module-ember.front.itlb"><code class="xref">ember.front.itlb</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="modules/l1i.html#module-ember.front.l1i"><code class="xref">ember.front.l1i</code></a></td><td>
        <em></em></td></tr>
      <tr class="cg-1">
        <td></td>
@@ -165,6 +165,11 @@
        <td></td>
        <td>&#160;&#160;&#160;
        <a href="config/isa.html#module-ember.riscv.inst"><code class="xref">ember.riscv.inst</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="modules/fetch.html#module-ember.uarch.fetch"><code class="xref">ember.uarch.fetch</code></a></td><td>
        <em></em></td></tr>
    </table>
 

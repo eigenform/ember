@@ -22,7 +22,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Instruction Decode" href="decode.html" />
-    <link rel="prev" title="L1 Instruction Cache Fill" href="ifill.html" /> 
+    <link rel="prev" title="Fetch Target Queue" href="ftq.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -58,10 +58,10 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="common.html">Common Components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="rap.html">Return Address Predictor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="l1i.html">L1 Instruction Cache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="itlb.html">L1 Instruction Cache TLB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ifill.html">L1 Instruction Cache Fill</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Instruction Fetch</a></li>
 <li class="toctree-l1"><a class="reference internal" href="decode.html">Instruction Decode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="predecode.html">Instruction Predecode</a></li>
@@ -95,45 +95,36 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-ember.fetch">
-<span id="instruction-fetch"></span><h1>Instruction Fetch<a class="headerlink" href="#module-ember.fetch" title="Permalink to this heading"></a></h1>
+  <section id="module-ember.front.fetch">
+<span id="instruction-fetch"></span><h1>Instruction Fetch<a class="headerlink" href="#module-ember.front.fetch" title="Permalink to this heading"></a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.fetch.FetchRequest">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.fetch.</span></span><span class="sig-name descname"><span class="pre">FetchRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.fetch.FetchRequest" title="Permalink to this definition"></a></dt>
-<dd><p>A request to fetch a cache line at some virtual address.</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">vaddr</span></code>:    Virtual address of the requested cacheline</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">passthru</span></code>: Bypass virtual-to-physical translation</p></li>
-</ul>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="ember.fetch.FetchResponse">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.fetch.</span></span><span class="sig-name descname"><span class="pre">FetchResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.fetch.FetchResponse" title="Permalink to this definition"></a></dt>
-<dd><p>Response to a fetch request.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="ember.fetch.FetchResponseStatus">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.fetch.</span></span><span class="sig-name descname"><span class="pre">FetchResponseStatus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names=&lt;not</span> <span class="pre">given&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">*values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">module=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qualname=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">boundary=None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.fetch.FetchResponseStatus" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="ember.fetch.FetchUnit">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.fetch.</span></span><span class="sig-name descname"><span class="pre">FetchUnit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.fetch.FetchUnit" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="ember.front.fetch.FetchUnit">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.front.fetch.</span></span><span class="sig-name descname"><span class="pre">FetchUnit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.fetch.FetchUnit" title="Permalink to this definition"></a></dt>
 <dd><p>Instruction fetch logic.</p>
-<p>Instruction fetch is responsible for handling requests to bring 
+<p>Instruction fetch is responsible for handling requests to bring
 instruction bytes into the pipeline from the L1I cache.</p>
 <p>There are two cases where a request cannot be completed:</p>
 <ol class="arabic simple">
-<li><p>A miss in the TLB causes the request to stall for the availability of 
+<li><p>A miss in the TLB causes the request to stall for the availability of
 the associated physical address. This causes a PTW request.</p></li>
 <li><p>A miss in the L1I cache causes the request to stall for the availability
 of the associated cacheline. This causes an L1I fill request.</p></li>
 </ol>
+<dl class="field-list simple">
+<dt class="field-odd">Ports<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>req</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">FetchRequest</span></code>) – Instruction fetch request</p></li>
+<li><p><strong>resp</strong> – Instruction fetch response</p></li>
+<li><p><strong>l1i_rp</strong> (<a class="reference internal" href="l1i.html#ember.front.l1i.L1ICacheReadPort" title="ember.front.l1i.L1ICacheReadPort"><code class="xref py py-class docutils literal notranslate"><span class="pre">ember.front.l1i.L1ICacheReadPort</span></code></a>) – L1I cache read port</p></li>
+<li><p><strong>tlb_rp</strong> (<a class="reference internal" href="itlb.html#ember.front.itlb.L1ICacheTLBReadPort" title="ember.front.itlb.L1ICacheTLBReadPort"><code class="xref py py-class docutils literal notranslate"><span class="pre">ember.front.itlb.L1ICacheTLBReadPort</span></code></a>) – L1I TLB read port</p></li>
+<li><p><strong>ifill_req</strong> (<a class="reference internal" href="ifill.html#ember.front.ifill.L1IFillRequest" title="ember.front.ifill.L1IFillRequest"><code class="xref py py-class docutils literal notranslate"><span class="pre">ember.front.ifill.L1IFillRequest</span></code></a>) – L1I fill unit request</p></li>
+<li><p><strong>ifill_sts</strong> (<a class="reference internal" href="ifill.html#ember.front.ifill.L1IFillStatus" title="ember.front.ifill.L1IFillStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">ember.front.ifill.L1IFillStatus</span></code></a>) – L1I fill unit status</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
-<dt class="sig sig-object py" id="ember.fetch.FetchUnit.elaborate_s0">
-<span class="sig-name descname"><span class="pre">elaborate_s0</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.fetch.FetchUnit.elaborate_s0" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="ember.front.fetch.FetchUnit.elaborate_s0">
+<span class="sig-name descname"><span class="pre">elaborate_s0</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.fetch.FetchUnit.elaborate_s0" title="Permalink to this definition"></a></dt>
 <dd><p>Instruction Fetch - Stage #0</p>
 <ol class="arabic simple">
 <li><p>Drive inputs to the L1I arrays and to the TLB.</p></li>
@@ -142,28 +133,76 @@ of the associated cacheline. This causes an L1I fill request.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="ember.fetch.FetchUnit.elaborate_s1">
-<span class="sig-name descname"><span class="pre">elaborate_s1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.fetch.FetchUnit.elaborate_s1" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="ember.front.fetch.FetchUnit.elaborate_s1">
+<span class="sig-name descname"><span class="pre">elaborate_s1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.fetch.FetchUnit.elaborate_s1" title="Permalink to this definition"></a></dt>
 <dd><p>Instruction Fetch - Stage #1</p>
 <ol class="arabic simple">
-<li><p>If we’re handling a passthrough request, output from TLB 
+<li><p>If we’re handling a passthrough request, output from TLB
 will be invalid. Instead, we use the VPN to select a matching
 cache way.</p></li>
-<li><p>Valid output from the TLB will either indicate a hit or a miss. 
-When a hit occurs, use the PPN to select a matching cache way. 
+<li><p>Valid output from the TLB will either indicate a hit or a miss.
+When a hit occurs, use the PPN to select a matching cache way.
 When a miss occurs, send a request to the PTW.</p></li>
-<li><p>If a matching cache way is found, respond with the hitting line. 
-If no match occurs, send a request to the L1I fill interface. 
+<li><p>If a matching cache way is found, respond with the hitting line.
+If no match occurs, send a request to the L1I fill interface.
 The way index is selected with an LFSR.</p></li>
 </ol>
 </dd></dl>
 
 </dd></dl>
 
+<span class="target" id="module-ember.uarch.fetch"></span><dl class="py class">
+<dt class="sig sig-object py" id="ember.uarch.fetch.FTQIndex">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.uarch.fetch.</span></span><span class="sig-name descname"><span class="pre">FTQIndex</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.uarch.fetch.FTQIndex" title="Permalink to this definition"></a></dt>
+<dd><p>An index into the FTQ.</p>
+</dd></dl>
+
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.fetch.FetchUnitHarness">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.fetch.</span></span><span class="sig-name descname"><span class="pre">FetchUnitHarness</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.fetch.FetchUnitHarness" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
+<dt class="sig sig-object py" id="ember.uarch.fetch.FetchResponseStatus">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.uarch.fetch.</span></span><span class="sig-name descname"><span class="pre">FetchResponseStatus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.uarch.fetch.FetchResponseStatus" title="Permalink to this definition"></a></dt>
+<dd><p>Status of a fetch request that has passed through the IFU.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Values<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>NONE</strong></p></li>
+<li><p><strong>L1_HIT</strong> – Request hit in the L1 instruction cache</p></li>
+<li><p><strong>L1_MISS</strong> – Request missed in the L1 instruction cache</p></li>
+<li><p><strong>TLB_MISS</strong> – Request missed in the L1I TLB</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.uarch.fetch.FetchRequest">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.uarch.fetch.</span></span><span class="sig-name descname"><span class="pre">FetchRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.uarch.fetch.FetchRequest" title="Permalink to this definition"></a></dt>
+<dd><p>A request to fetch a cache line at some virtual address.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Members<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vaddr</strong> – Virtual address of the requested cacheline</p></li>
+<li><p><strong>passthru</strong> – Bypass virtual-to-physical translation</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.uarch.fetch.FetchResponse">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.uarch.fetch.</span></span><span class="sig-name descname"><span class="pre">FetchResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.uarch.fetch.FetchResponse" title="Permalink to this definition"></a></dt>
+<dd><p>Response to a fetch request.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Members<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>valid</strong> – This response is valid</p></li>
+<li><p><strong>vaddr</strong> – Virtual address associated with this response</p></li>
+<li><p><strong>sts</strong> (<a class="reference internal" href="#ember.uarch.fetch.FetchResponseStatus" title="ember.uarch.fetch.FetchResponseStatus"><code class="xref py py-class docutils literal notranslate"><span class="pre">FetchResponseStatus</span></code></a>) – Status associated with this response</p></li>
+<li><p><strong>data</strong> – Response data (an L1I cache line)</p></li>
+<li><p><strong>ftq_idx</strong> – FTQ index responsible for the associated request</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 </section>
 
@@ -171,7 +210,7 @@ The way index is selected with an LFSR.</p></li>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="ifill.html" class="btn btn-neutral float-left" title="L1 Instruction Cache Fill" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ftq.html" class="btn btn-neutral float-left" title="Fetch Target Queue" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="decode.html" class="btn btn-neutral float-right" title="Instruction Decode" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

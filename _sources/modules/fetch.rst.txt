@@ -1,6 +1,9 @@
 Instruction Fetch
 =================
 
-.. automodule:: ember.fetch
+.. automodule:: ember.front.fetch
+   :members:
+
+.. automodule:: ember.uarch.fetch
    :members:
 

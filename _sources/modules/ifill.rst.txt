@@ -2,6 +2,6 @@ L1 Instruction Cache Fill
 =========================
 
 
-.. automodule:: ember.cache.ifill
+.. automodule:: ember.front.ifill
    :members:
 

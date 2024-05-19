@@ -22,7 +22,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="L1 Instruction Cache TLB" href="itlb.html" />
-    <link rel="prev" title="Fetch Target Queue" href="ftq.html" /> 
+    <link rel="prev" title="Return Address Predictor" href="rap.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -58,10 +58,10 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="common.html">Common Components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="rap.html">Return Address Predictor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">L1 Instruction Cache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="itlb.html">L1 Instruction Cache TLB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ifill.html">L1 Instruction Cache Fill</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fetch.html">Instruction Fetch</a></li>
 <li class="toctree-l1"><a class="reference internal" href="decode.html">Instruction Decode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="predecode.html">Instruction Predecode</a></li>
@@ -95,89 +95,123 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-ember.cache.l1i">
-<span id="l1-instruction-cache"></span><h1>L1 Instruction Cache<a class="headerlink" href="#module-ember.cache.l1i" title="Permalink to this heading"></a></h1>
+  <section id="module-ember.front.l1i">
+<span id="l1-instruction-cache"></span><h1>L1 Instruction Cache<a class="headerlink" href="#module-ember.front.l1i" title="Permalink to this heading"></a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.cache.l1i.L1ICache">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.l1i.L1ICache" title="Permalink to this definition"></a></dt>
-<dd><p>Backing memory for an L1 instruction cache.</p>
-<p>This module consists of a data array and a tag array. 
-This only implements the <em>storage</em> for a [set-associative] 
-virtually-indexed and physically-tagged (VIPT) cache. 
-It does not include any of the logic for tag matching.</p>
-<section id="read-and-write-ports">
-<h2>Read and Write Ports<a class="headerlink" href="#read-and-write-ports" title="Permalink to this heading"></a></h2>
-<p>Read ports are used to read the tags and data for a particular set 
-<em>across all ways</em> in the cache. 
-Write ports are used to replace the tag and data for a particular set and
-a particular way.</p>
-<p>For now, there is only one read port and one write port.</p>
-</section>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="ember.cache.l1i.L1ICacheDataArray">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheDataArray</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.l1i.L1ICacheDataArray" title="Permalink to this definition"></a></dt>
-<dd><p>L1 instruction cache data array.</p>
-<p>The data array is a memory whose capacity is the number of sets in the 
-L1I cache, and where elements in the array are caches lines.</p>
-<p>Read ports perform reads from particular set across all ways.
-Write ports perform writes to a particular set and way. 
-For now, there is one read port and one write port.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="ember.cache.l1i.L1ICacheReadPort">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheReadPort</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.l1i.L1ICacheReadPort" title="Permalink to this definition"></a></dt>
-<dd><p>An L1I cache read port.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="ember.cache.l1i.L1ICacheReadRequest">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheReadRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.l1i.L1ICacheReadRequest" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="ember.front.l1i.L1ICacheReadPort">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.front.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheReadPort</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.l1i.L1ICacheReadPort" title="Permalink to this definition"></a></dt>
+<dd><dl class="py class">
+<dt class="sig sig-object py" id="ember.front.l1i.L1ICacheReadPort.Request">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.l1i.L1ICacheReadPort.Request" title="Permalink to this definition"></a></dt>
 <dd><p>Request to read all tag/data ways for some set in the L1I cache.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.cache.l1i.L1ICacheReadResponse">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheReadResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.l1i.L1ICacheReadResponse" title="Permalink to this definition"></a></dt>
-<dd><p>Response with all tag/data ways for a particular set in the L1I cache.</p>
+<dt class="sig sig-object py" id="ember.front.l1i.L1ICacheReadPort.Response">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Response</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.l1i.L1ICacheReadPort.Response" title="Permalink to this definition"></a></dt>
+<dd><p>Response with all tag/data ways for a particular set
+in the L1I cache.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.cache.l1i.L1ICacheTagArray">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheTagArray</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.l1i.L1ICacheTagArray" title="Permalink to this definition"></a></dt>
-<dd><p>L1 instruction cache tag array.</p>
-<p>The tag array is a memory whose capacity is the number of sets in the 
-L1I cache, and where elements in the array are tags belonging to each way 
-in a set.</p>
-<p>Read ports perform reads from particular set across all ways.
-Write ports perform writes to a particular set and way. 
-For now, there is only one read port and one write port.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="ember.cache.l1i.L1ICacheWritePort">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheWritePort</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.l1i.L1ICacheWritePort" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="ember.front.l1i.L1ICacheWritePort">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.front.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheWritePort</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.l1i.L1ICacheWritePort" title="Permalink to this definition"></a></dt>
 <dd><p>An L1I cache write port.</p>
-</dd></dl>
-
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.cache.l1i.L1ICacheWriteRequest">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheWriteRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.l1i.L1ICacheWriteRequest" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="ember.front.l1i.L1ICacheWritePort.Request">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.l1i.L1ICacheWritePort.Request" title="Permalink to this definition"></a></dt>
 <dd><p>A request to write a particular set/way in the L1I cache.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.cache.l1i.L1ICacheWriteResponse">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheWriteResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.l1i.L1ICacheWriteResponse" title="Permalink to this definition"></a></dt>
-<dd><p>Response to an ::L1ICacheWriteRequest .</p>
+<dt class="sig sig-object py" id="ember.front.l1i.L1ICacheWritePort.Response">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Response</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../config/param.html#ember.param.EmberParams" title="ember.param.EmberParams"><span class="pre">EmberParams</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.l1i.L1ICacheWritePort.Response" title="Permalink to this definition"></a></dt>
+<dd><p>Response to a write request.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.cache.l1i.L1IWaySelect">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.cache.l1i.</span></span><span class="sig-name descname"><span class="pre">L1IWaySelect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.cache.l1i.L1IWaySelect" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
+<dt class="sig sig-object py" id="ember.front.l1i.L1ICacheDataArray">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.front.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheDataArray</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.l1i.L1ICacheDataArray" title="Permalink to this definition"></a></dt>
+<dd><p>L1 instruction cache data array.</p>
+<p>The data array is a memory whose capacity is the number of sets in the
+L1I cache, and where elements in the array are caches lines.</p>
+<p>Read ports perform reads from particular set across all ways.
+Write ports perform writes to a particular set and way.
+For now, there is one read port and one write port.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Ports<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rp_en</strong> – Read port enable</p></li>
+<li><p><strong>rp_idx</strong> – Read port set index</p></li>
+<li><p><strong>rp_data</strong> – Read port data</p></li>
+<li><p><strong>wp_en</strong> – Write port enable</p></li>
+<li><p><strong>wp_way</strong> – Write port way index</p></li>
+<li><p><strong>wp_idx</strong> – Write port set index</p></li>
+<li><p><strong>wp_data</strong> – Write port data</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.front.l1i.L1ICacheTagArray">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.front.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICacheTagArray</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.l1i.L1ICacheTagArray" title="Permalink to this definition"></a></dt>
+<dd><p>L1 instruction cache tag array.</p>
+<p>The tag array is a memory whose capacity is the number of sets in the
+L1I cache, and where elements in the array are tags belonging to each way
+in a set.</p>
+<p>Read ports perform reads from particular set across all ways.
+Write ports perform writes to a particular set and way.
+For now, there is only one read port and one write port.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Ports<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rp_en</strong> – Read port enable</p></li>
+<li><p><strong>rp_idx</strong> – Read port set index</p></li>
+<li><p><strong>rp_data</strong> – Read port data</p></li>
+<li><p><strong>wp_en</strong> – Write port enable</p></li>
+<li><p><strong>wp_way</strong> – Write port way index</p></li>
+<li><p><strong>wp_idx</strong> – Write port set index</p></li>
+<li><p><strong>wp_data</strong> – Write port data</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.front.l1i.L1ICache">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.front.l1i.</span></span><span class="sig-name descname"><span class="pre">L1ICache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.l1i.L1ICache" title="Permalink to this definition"></a></dt>
+<dd><p>Backing memory for an L1 instruction cache.</p>
+<p>This module consists of a data array and a tag array.
+This only implements the <em>storage</em> for a [set-associative]
+virtually-indexed and physically-tagged (VIPT) cache.
+It does not include any of the logic for tag matching.</p>
+<p>Read ports are used to read the tags and data for a particular set
+<em>across all ways</em> in the cache.
+Write ports are used to replace the tag and data for a particular set and
+a particular way.</p>
+<p>For now, there is only one read port and one write port.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Ports<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rp</strong> (<a class="reference internal" href="#ember.front.l1i.L1ICacheReadPort" title="ember.front.l1i.L1ICacheReadPort"><code class="xref py py-class docutils literal notranslate"><span class="pre">L1ICacheReadPort</span></code></a>) – Read port.</p></li>
+<li><p><strong>wp</strong> (<a class="reference internal" href="#ember.front.l1i.L1ICacheWritePort" title="ember.front.l1i.L1ICacheWritePort"><code class="xref py py-class docutils literal notranslate"><span class="pre">L1ICacheWritePort</span></code></a>) – Write port.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.front.l1i.L1IWaySelect">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.front.l1i.</span></span><span class="sig-name descname"><span class="pre">L1IWaySelect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.front.l1i.L1IWaySelect" title="Permalink to this definition"></a></dt>
+<dd><p>L1I cache way select logic.</p>
+<p>Given a set of tags <code class="docutils literal notranslate"><span class="pre">i_tags</span></code> across all ways in a set, determine which
+way matches</p>
+</dd></dl>
 
 </section>
 
@@ -185,7 +219,7 @@ For now, there is only one read port and one write port.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="ftq.html" class="btn btn-neutral float-left" title="Fetch Target Queue" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="rap.html" class="btn btn-neutral float-left" title="Return Address Predictor" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="itlb.html" class="btn btn-neutral float-right" title="L1 Instruction Cache TLB" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

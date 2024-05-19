@@ -58,10 +58,10 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../modules/common.html">Common Components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/rap.html">Return Address Predictor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../modules/ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/l1i.html">L1 Instruction Cache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/itlb.html">L1 Instruction Cache TLB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/ifill.html">L1 Instruction Cache Fill</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules/ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/fetch.html">Instruction Fetch</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/decode.html">Instruction Decode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/predecode.html">Instruction Predecode</a></li>
@@ -101,48 +101,21 @@
 the hierarchy and used to control how the hardware is generated.</p>
 <hr class="docutils" />
 <span class="target" id="module-ember.param"></span><dl class="py class">
-<dt class="sig sig-object py" id="ember.param.DecodeParams">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.param.</span></span><span class="sig-name descname"><span class="pre">DecodeParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#ember.param.RiscvParams" title="ember.param.RiscvParams"><span class="pre">RiscvParams</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.param.DecodeParams" title="Permalink to this definition"></a></dt>
-<dd><p>Instruction decode parameters.</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">width</span></code> - Number of instructions decoded per cycle</p></li>
-</ul>
+<dt class="sig sig-object py" id="ember.param.RiscvParams">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.param.</span></span><span class="sig-name descname"><span class="pre">RiscvParams</span></span><a class="headerlink" href="#ember.param.RiscvParams" title="Permalink to this definition"></a></dt>
+<dd><p>RISC-V ISA parameters.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ember.param.RiscvParams.reset_vector">
+<span class="sig-name descname"><span class="pre">reset_vector</span></span><a class="headerlink" href="#ember.param.RiscvParams.reset_vector" title="Permalink to this definition"></a></dt>
+<dd><p>The program counter value on reset</p>
 </dd></dl>
 
-<dl class="py class">
-<dt class="sig sig-object py" id="ember.param.EmberParams">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.param.</span></span><span class="sig-name descname"><span class="pre">EmberParams</span></span><a class="headerlink" href="#ember.param.EmberParams" title="Permalink to this definition"></a></dt>
-<dd><p>Top-level parameters.</p>
-<p>For now, users are expected to manually change values in this class. 
-At some point, we ideally want this to be an object that a user can 
-construct and override while elaborating the design.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="ember.param.FetchParams">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.param.</span></span><span class="sig-name descname"><span class="pre">FetchParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#ember.param.RiscvParams" title="ember.param.RiscvParams"><span class="pre">RiscvParams</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.param.FetchParams" title="Permalink to this definition"></a></dt>
-<dd><p>Instruction fetch parameters.</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">width</span></code> - Number of instructions fetched per cycle</p></li>
-</ul>
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="ember.param.InstructionBusParams">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.param.</span></span><span class="sig-name descname"><span class="pre">InstructionBusParams</span></span><a class="headerlink" href="#ember.param.InstructionBusParams" title="Permalink to this definition"></a></dt>
 <dd><p>Memory interface parameters.</p>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="ember.param.L1ICacheParams">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.param.</span></span><span class="sig-name descname"><span class="pre">L1ICacheParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#ember.param.RiscvParams" title="ember.param.RiscvParams"><span class="pre">RiscvParams</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">word_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_sets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_ways</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_depth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.param.L1ICacheParams" title="Permalink to this definition"></a></dt>
-<dd><p>L1 instruction cache parameters.</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">num_sets</span></code>   - Number of sets</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">num_ways</span></code>   - Number of ways</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">word_width</span></code> - Number of bits in a cache word</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">line_depth</span></code> - Number of words in a cache line</p></li>
-</ul>
 </dd></dl>
 
 <dl class="py class">
@@ -155,9 +128,100 @@ construct and override while elaborating the design.</p>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.param.RiscvParams">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.param.</span></span><span class="sig-name descname"><span class="pre">RiscvParams</span></span><a class="headerlink" href="#ember.param.RiscvParams" title="Permalink to this definition"></a></dt>
-<dd><p>RISC-V ISA parameters.</p>
+<dt class="sig sig-object py" id="ember.param.L1ICacheParams">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.param.</span></span><span class="sig-name descname"><span class="pre">L1ICacheParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#ember.param.RiscvParams" title="ember.param.RiscvParams"><span class="pre">RiscvParams</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">word_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_sets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_ways</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">line_depth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.param.L1ICacheParams" title="Permalink to this definition"></a></dt>
+<dd><p>L1 instruction cache parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_sets</strong> – Number of sets</p></li>
+<li><p><strong>num_ways</strong> – Number of ways</p></li>
+<li><p><strong>word_width</strong> – Number of bits in a cache word</p></li>
+<li><p><strong>line_depth</strong> – Number of words in a cache line</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.param.FetchParams">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.param.</span></span><span class="sig-name descname"><span class="pre">FetchParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#ember.param.RiscvParams" title="ember.param.RiscvParams"><span class="pre">RiscvParams</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.param.FetchParams" title="Permalink to this definition"></a></dt>
+<dd><p>Instruction fetch parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>width</strong> – Number of instructions fetched per cycle</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.param.DecodeParams">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.param.</span></span><span class="sig-name descname"><span class="pre">DecodeParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#ember.param.RiscvParams" title="ember.param.RiscvParams"><span class="pre">RiscvParams</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.param.DecodeParams" title="Permalink to this definition"></a></dt>
+<dd><p>Instruction decode parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>width</strong> – Number of instructions decoded per cycle</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.param.EmberParams">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.param.</span></span><span class="sig-name descname"><span class="pre">EmberParams</span></span><a class="headerlink" href="#ember.param.EmberParams" title="Permalink to this definition"></a></dt>
+<dd><p>Top-level parameters.</p>
+<p>For now, users are expected to manually change values in this class.
+At some point, we ideally want this to be an object that a user can
+construct and override while elaborating the design.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ember.param.EmberParams.superscalar_width">
+<span class="sig-name descname"><span class="pre">superscalar_width</span></span><a class="headerlink" href="#ember.param.EmberParams.superscalar_width" title="Permalink to this definition"></a></dt>
+<dd><p>The width of the instruction pipeline (in number of instructions).</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ember.param.EmberParams.inst">
+<span class="sig-name descname"><span class="pre">inst</span></span><a class="headerlink" href="#ember.param.EmberParams.inst" title="Permalink to this definition"></a></dt>
+<dd><p>The set of supported RISC-V instructions</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">RvInstGroup</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ember.param.EmberParams.mops">
+<span class="sig-name descname"><span class="pre">mops</span></span><a class="headerlink" href="#ember.param.EmberParams.mops" title="Permalink to this definition"></a></dt>
+<dd><p>The set of supported macro-ops</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">EmberMopGroup</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ember.param.EmberParams.vaddr">
+<span class="sig-name descname"><span class="pre">vaddr</span></span><a class="headerlink" href="#ember.param.EmberParams.vaddr" title="Permalink to this definition"></a></dt>
+<dd><p>The layout for a virtual address.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>VirtualAddress</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ember.param.EmberParams.paddr">
+<span class="sig-name descname"><span class="pre">paddr</span></span><a class="headerlink" href="#ember.param.EmberParams.paddr" title="Permalink to this definition"></a></dt>
+<dd><p>The layout for a physical address.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>PhysicalAddress</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>

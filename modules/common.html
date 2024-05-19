@@ -58,10 +58,10 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Common Components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="rap.html">Return Address Predictor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="l1i.html">L1 Instruction Cache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="itlb.html">L1 Instruction Cache TLB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ifill.html">L1 Instruction Cache Fill</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fetch.html">Instruction Fetch</a></li>
 <li class="toctree-l1"><a class="reference internal" href="decode.html">Instruction Decode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="predecode.html">Instruction Predecode</a></li>
@@ -105,30 +105,67 @@
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>This is probably very inefficient and not synthesizable
-(in principle?), but we can worry about that after we have something 
+(in principle?), but we can worry about that after we have something
 behaviorally correct.</p>
 </div>
-<section id="ports">
-<h2>Ports<a class="headerlink" href="#ports" title="Permalink to this heading"></a></h2>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">i_pop_size</span></code>: Number of entries being popped/consumed this cycle.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">i_push_size</span></code>: Number of entries being pushed this cycle.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">i_push_data</span></code>: Entry data being pushed this cycle.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">o_data</span></code>: The oldest entries in the queue.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">o_pop_limit</span></code>: Number of valid entries in <code class="docutils literal notranslate"><span class="pre">o_data</span></code> that are             allowed to be popped this cycle.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">o_push_limit</span></code>: Number of entries in <code class="docutils literal notranslate"><span class="pre">i_push_data</span></code> that are             allowed to be pushed this cycle.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">o_overflow</span></code>: The push request on the previous cycle would have             caused an overflow condition.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">o_underflow</span></code>: The pop request on the previous cycle would have             caused an underflow condition.</p></li>
+<dl class="field-list simple">
+<dt class="field-odd">Ports<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>i_pop_size</strong> – Number of entries being popped/consumed this cycle.</p></li>
+<li><p><strong>i_push_size</strong> – Number of entries being pushed this cycle.</p></li>
+<li><p><strong>i_push_data</strong> – Entry data being pushed this cycle.</p></li>
+<li><p><strong>o_data</strong> – The oldest entries in the queue.</p></li>
+<li><p><strong>o_pop_limit</strong> – Number of valid entries in <code class="docutils literal notranslate"><span class="pre">o_data</span></code> that are
+allowed to be popped this cycle.</p></li>
+<li><p><strong>o_push_limit</strong> – Number of entries in <code class="docutils literal notranslate"><span class="pre">i_push_data</span></code> that are
+allowed to be pushed this cycle.</p></li>
+<li><p><strong>o_overflow</strong> – The push request on the previous cycle would have
+caused an overflow condition.</p></li>
+<li><p><strong>o_underflow</strong> – The pop request on the previous cycle would have
+caused an underflow condition.</p></li>
 </ul>
-</section>
-<section id="parameters">
-<h2>Parameters<a class="headerlink" href="#parameters" title="Permalink to this heading"></a></h2>
-<ul class="simple">
-<li><p>The <code class="docutils literal notranslate"><span class="pre">depth</span></code> of the queue is the number of entries.</p></li>
-<li><p>The <code class="docutils literal notranslate"><span class="pre">width</span></code> of the queue is the maximum number of entries that can 
-potentially be enqueued/dequeued in a single cycle.</p></li>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>depth</strong> – The number of queue entries.</p></li>
+<li><p><strong>width</strong> – The maximum number of entries that can potentially
+be enqueued/dequeued in a single cycle.</p></li>
 </ul>
-</section>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.common.PriorityMux">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.common.</span></span><span class="sig-name descname"><span class="pre">PriorityMux</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.common.PriorityMux" title="Permalink to this definition"></a></dt>
+<dd><p>A chain of muxes.</p>
+<p>Selects the first signal for which the corresponding select bit is high.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Ports<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sel</strong> – Input select signals</p></li>
+<li><p><strong>val</strong> – Input data signals</p></li>
+<li><p><strong>output</strong> – Output data signal (zero when the ‘valid’ bit is low)</p></li>
+<li><p><strong>valid</strong> – Output valid (high when any of the select bits are valid)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.common.coding.EmberPriorityEncoder">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.common.coding.</span></span><span class="sig-name descname"><span class="pre">EmberPriorityEncoder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_loc_at</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.common.coding.EmberPriorityEncoder" title="Permalink to this definition"></a></dt>
+<dd><p>A priority encoder.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Ports<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>i</strong> – Input bits (one-hot)</p></li>
+<li><p><strong>mask</strong> – Output bits (one-hot)</p></li>
+<li><p><strong>o</strong> – Output index (encoded)</p></li>
+<li><p><strong>valid</strong> – High when at least one bit is valid in in the input</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </section>

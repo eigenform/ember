@@ -21,7 +21,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Fetch Target Queue" href="ftq.html" />
+    <link rel="next" title="L1 Instruction Cache" href="l1i.html" />
     <link rel="prev" title="Common Components" href="common.html" /> 
 </head>
 
@@ -58,10 +58,10 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="common.html">Common Components</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Return Address Predictor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="l1i.html">L1 Instruction Cache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="itlb.html">L1 Instruction Cache TLB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ifill.html">L1 Instruction Cache Fill</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fetch.html">Instruction Fetch</a></li>
 <li class="toctree-l1"><a class="reference internal" href="decode.html">Instruction Decode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="predecode.html">Instruction Predecode</a></li>
@@ -113,16 +113,19 @@ instructions.</p>
 return address</p></li>
 </ol>
 <span class="target" id="module-ember.bp.rap"></span><dl class="py class">
-<dt class="sig sig-object py" id="ember.bp.rap.RapPopRequest">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.bp.rap.</span></span><span class="sig-name descname"><span class="pre">RapPopRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.bp.rap.RapPopRequest" title="Permalink to this definition"></a></dt>
-<dd><p>A request to pop an address off the RAP stack.</p>
-</dd></dl>
+<dt class="sig sig-object py" id="ember.bp.rap.RapRequest">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.bp.rap.</span></span><span class="sig-name descname"><span class="pre">RapRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.bp.rap.RapRequest" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.bp.rap.RapPopResponse">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.bp.rap.</span></span><span class="sig-name descname"><span class="pre">RapPopResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.bp.rap.RapPopResponse" title="Permalink to this definition"></a></dt>
-<dd><p>Response to a RAP pop request.</p>
-</dd></dl>
+<dt class="sig sig-object py" id="ember.bp.rap.RapWriteRequest">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.bp.rap.</span></span><span class="sig-name descname"><span class="pre">RapWriteRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.bp.rap.RapWriteRequest" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ember.bp.rap.RapResponse">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.bp.rap.</span></span><span class="sig-name descname"><span class="pre">RapResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.bp.rap.RapResponse" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="ember.bp.rap.RapPushRequest">
@@ -137,19 +140,16 @@ return address</p></li>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.bp.rap.RapRequest">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.bp.rap.</span></span><span class="sig-name descname"><span class="pre">RapRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.bp.rap.RapRequest" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
+<dt class="sig sig-object py" id="ember.bp.rap.RapPopRequest">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.bp.rap.</span></span><span class="sig-name descname"><span class="pre">RapPopRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.bp.rap.RapPopRequest" title="Permalink to this definition"></a></dt>
+<dd><p>A request to pop an address off the RAP stack.</p>
+</dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="ember.bp.rap.RapResponse">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.bp.rap.</span></span><span class="sig-name descname"><span class="pre">RapResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.bp.rap.RapResponse" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="ember.bp.rap.RapWriteRequest">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.bp.rap.</span></span><span class="sig-name descname"><span class="pre">RapWriteRequest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.bp.rap.RapWriteRequest" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
+<dt class="sig sig-object py" id="ember.bp.rap.RapPopResponse">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ember.bp.rap.</span></span><span class="sig-name descname"><span class="pre">RapPopResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_entries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ember.bp.rap.RapPopResponse" title="Permalink to this definition"></a></dt>
+<dd><p>Response to a RAP pop request.</p>
+</dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="ember.bp.rap.ReturnAddressPredictor">
@@ -157,9 +157,9 @@ return address</p></li>
 <dd><p>A memory device used to track predicted return addresses.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>At the moment, this is a simple memory device that does not accomodate 
-for overflow/underflow conditions, and we assume that other logic in 
-the pipeline is responsible for interacting with the RAP in a way 
+<p>At the moment, this is a simple memory device that does not accomodate
+for overflow/underflow conditions, and we assume that other logic in
+the pipeline is responsible for interacting with the RAP in a way
 that implements a stack.</p>
 </div>
 </dd></dl>
@@ -171,7 +171,7 @@ that implements a stack.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="common.html" class="btn btn-neutral float-left" title="Common Components" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="ftq.html" class="btn btn-neutral float-right" title="Fetch Target Queue" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="l1i.html" class="btn btn-neutral float-right" title="L1 Instruction Cache" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

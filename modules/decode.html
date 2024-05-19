@@ -58,10 +58,10 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="common.html">Common Components</a></li>
 <li class="toctree-l1"><a class="reference internal" href="rap.html">Return Address Predictor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="l1i.html">L1 Instruction Cache</a></li>
 <li class="toctree-l1"><a class="reference internal" href="itlb.html">L1 Instruction Cache TLB</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ifill.html">L1 Instruction Cache Fill</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ftq.html">Fetch Target Queue</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fetch.html">Instruction Fetch</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Instruction Decode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="predecode.html">Instruction Predecode</a></li>
@@ -118,10 +118,10 @@ encoding onto a representation of an instruction called a “macro-op.”</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>For now, this decoder probably synthesizes into many cascading levels
-of logic. This is probably fine for simple testing, but the delay on 
+of logic. This is probably fine for simple testing, but the delay on
 actual hardware is probably too great to be clocked very high.</p>
-<p>Instead, you probably want to check all cases in parallel, priority 
-encode the resulting bits, and then use the index to access a table of 
+<p>Instead, you probably want to check all cases in parallel, priority
+encode the resulting bits, and then use the index to access a table of
 macro-op constants.</p>
 </div>
 </dd></dl>
