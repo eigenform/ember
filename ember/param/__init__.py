@@ -90,6 +90,7 @@ class L1ICacheParams(object):
 
         self.num_rp = 1
         self.num_wp = 1
+        self.num_pp = 1
 
         # L1I cache line 
         self.line_bits    = self.word_width * self.line_depth

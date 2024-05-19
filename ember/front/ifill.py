@@ -96,6 +96,8 @@ class L1IMissStatusHoldingRegister(Component):
     =====
     ready: 
         High when this MSHR is ready to accept a request
+    complete:
+        High when this MSHR can be reset
     req: 
         Incoming fill request to this MSHR
     l1i_wp: 

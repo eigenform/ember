@@ -18,22 +18,22 @@ from amaranth.back import verilog, rtlil
 from struct import pack, unpack
 
 def tb_data_array_rw(dut: L1ICacheDataArray):
-    yield dut.wp_en.eq(1)
-    yield dut.wp_data[0].eq(0xdeadc0de)
+    yield dut.wp.req.valid.eq(1)
+    yield dut.wp.req.data[0].eq(0xdeadc0de)
 
     yield Tick()
-    yield dut.wp_en.eq(0)
-    yield dut.wp_data[0].eq(0)
-    yield dut.rp_en.eq(1)
-    yield dut.rp_idx.eq(0)
+    yield dut.wp.req.valid.eq(0)
+    yield dut.wp.req.data[0].eq(0)
+    yield dut.rp.req.valid.eq(1)
+    yield dut.rp.req.set.eq(0)
 
-    data = yield dut.rp_data[0][0]
+    data = yield dut.rp.resp.data[0][0]
     assert data == 0x00000000
 
     yield Tick()
-    yield dut.rp_en.eq(0)
-    yield dut.rp_idx.eq(0)
-    data = yield dut.rp_data[0][0]
+    yield dut.rp.req.valid.eq(0)
+    yield dut.rp.req.set.eq(0)
+    data = yield dut.rp.resp.data[0][0]
     assert data == 0xdeadc0de
 
 
@@ -100,6 +100,13 @@ class L1ICacheHarness(object):
         yield self.dut.rp[rp_idx].req.set.eq(set_idx)
         yield self.dut.rp[rp_idx].req.valid.eq(1)
 
+    def drive_probe_port(self, pp_idx, set_idx):
+        yield self.dut.pp[pp_idx].req.set.eq(set_idx)
+        yield self.dut.pp[pp_idx].req.valid.eq(1)
+    def clear_probe_port(self, pp_idx):
+        yield self.dut.pp[pp_idx].req.set.eq(0)
+        yield self.dut.pp[pp_idx].req.valid.eq(0)
+
     def sample_read_port(self, rp_idx):
         valid = yield self.dut.rp[rp_idx].resp.valid
         tag_data = []
@@ -117,12 +124,26 @@ class L1ICacheHarness(object):
             line_data.append(line)
         return (valid, tag_data, tag_valid, line_data)
 
+    def sample_probe_port(self, pp_idx):
+        valid = yield self.dut.pp[pp_idx].resp.valid
+        tag_data = []
+        tag_valid = []
+        for way in range(EmberParams.l1i.num_ways):
+            v = yield self.dut.pp[pp_idx].resp.tag_data[way].valid
+            tag = yield self.dut.pp[pp_idx].resp.tag_data[way].ppn
+            tag_data.append(tag)
+            tag_valid.append(v)
+        return (valid, tag_data, tag_valid)
+
 def tb_l1icache_rw(dut: L1ICache):
     cache = L1ICacheHarness(dut)
     yield from cache.drive_write_port(0, 1, 1, 0x4, [1,2,3,4])
+
     yield Tick()
     yield from cache.clear_write_port(0)
     yield from cache.drive_read_port(0, 1)
+    yield from cache.drive_probe_port(0, 1)
+
     yield Tick()
     yield from cache.clear_read_port(0)
     valid, tag_data, tag_valid, line_data = yield from cache.sample_read_port(0)
@@ -130,6 +151,12 @@ def tb_l1icache_rw(dut: L1ICache):
     assert tag_valid[1] == 1
     assert tag_data[1] == 0x4
     assert line_data[1] == [1,2,3,4]
+
+    valid, tag_data, tag_valid = yield from cache.sample_probe_port(0)
+    assert valid == 1
+    assert tag_data[1] == 0x4
+
+
 
 def tb_l1ifill(dut: L1IFillUnit):
     #log = logging.getLogger("tb_l1ifill")
@@ -172,7 +199,7 @@ class L1ICacheTests(unittest.TestCase):
 
     def test_l1icache_data_array_rw(self):
         tb = Testbench(
-            L1ICacheDataArray(EmberParams.l1i), 
+            L1ICacheDataArray(EmberParams), 
             tb_data_array_rw,
             "tb_data_array_rw"
         )
