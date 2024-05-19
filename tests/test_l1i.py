@@ -1,6 +1,9 @@
 
 import inspect
 import unittest
+import logging
+#logging.basicConfig(level=logging.DEBUG)
+
 from ember.param import *
 from ember.front.l1i import *
 from ember.front.itlb import *
@@ -69,45 +72,45 @@ class L1ICacheHarness(object):
     def __init__(self, dut: L1ICache):
         self.dut = dut
 
-    def drive_write_port(self, set_idx, way_idx, tag, line):
+    def drive_write_port(self, wp_idx, set_idx, way_idx, tag, line):
         assert len(line) == 4
-        yield self.dut.wp.req.valid.eq(1)
-        yield self.dut.wp.req.set.eq(set_idx)
-        yield self.dut.wp.req.way.eq(way_idx)
-        yield self.dut.wp.req.tag_data.valid.eq(1)
-        yield self.dut.wp.req.tag_data.ppn.eq(tag)
-        yield self.dut.wp.req.line_data[0].eq(line[0])
-        yield self.dut.wp.req.line_data[1].eq(line[1])
-        yield self.dut.wp.req.line_data[2].eq(line[2])
-        yield self.dut.wp.req.line_data[3].eq(line[3])
+        yield self.dut.wp[wp_idx].req.valid.eq(1)
+        yield self.dut.wp[wp_idx].req.set.eq(set_idx)
+        yield self.dut.wp[wp_idx].req.way.eq(way_idx)
+        yield self.dut.wp[wp_idx].req.tag_data.valid.eq(1)
+        yield self.dut.wp[wp_idx].req.tag_data.ppn.eq(tag)
+        yield self.dut.wp[wp_idx].req.line_data[0].eq(line[0])
+        yield self.dut.wp[wp_idx].req.line_data[1].eq(line[1])
+        yield self.dut.wp[wp_idx].req.line_data[2].eq(line[2])
+        yield self.dut.wp[wp_idx].req.line_data[3].eq(line[3])
 
-    def clear_write_port(self):
-        yield self.dut.wp.req.valid.eq(0)
-        yield self.dut.wp.req.set.eq(0)
-        yield self.dut.wp.req.way.eq(0)
-        yield self.dut.wp.req.tag_data.valid.eq(0)
-        yield self.dut.wp.req.tag_data.ppn.eq(0)
-        yield self.dut.wp.req.line_data.eq(0)
+    def clear_write_port(self, wp_idx):
+        yield self.dut.wp[wp_idx].req.valid.eq(0)
+        yield self.dut.wp[wp_idx].req.set.eq(0)
+        yield self.dut.wp[wp_idx].req.way.eq(0)
+        yield self.dut.wp[wp_idx].req.tag_data.valid.eq(0)
+        yield self.dut.wp[wp_idx].req.tag_data.ppn.eq(0)
+        yield self.dut.wp[wp_idx].req.line_data.eq(0)
 
-    def clear_read_port(self):
-        yield self.dut.rp.req.set.eq(0)
-        yield self.dut.rp.req.valid.eq(0)
+    def clear_read_port(self, rp_idx):
+        yield self.dut.rp[rp_idx].req.set.eq(0)
+        yield self.dut.rp[rp_idx].req.valid.eq(0)
 
-    def drive_read_port(self, set_idx):
-        yield self.dut.rp.req.set.eq(set_idx)
-        yield self.dut.rp.req.valid.eq(1)
+    def drive_read_port(self, rp_idx, set_idx):
+        yield self.dut.rp[rp_idx].req.set.eq(set_idx)
+        yield self.dut.rp[rp_idx].req.valid.eq(1)
 
-    def sample_read_port(self):
-        valid = yield self.dut.rp.resp.valid
+    def sample_read_port(self, rp_idx):
+        valid = yield self.dut.rp[rp_idx].resp.valid
         tag_data = []
         tag_valid = []
         line_data = []
         for way in range(EmberParams.l1i.num_ways):
-            v = yield self.dut.rp.resp.tag_data[way].valid
-            tag = yield self.dut.rp.resp.tag_data[way].ppn
+            v = yield self.dut.rp[rp_idx].resp.tag_data[way].valid
+            tag = yield self.dut.rp[rp_idx].resp.tag_data[way].ppn
             line = []
             for i in range(EmberParams.l1i.line_depth):
-                j = yield self.dut.rp.resp.line_data[way][i]
+                j = yield self.dut.rp[rp_idx].resp.line_data[way][i]
                 line.append(j)
             tag_data.append(tag)
             tag_valid.append(v)
@@ -116,43 +119,49 @@ class L1ICacheHarness(object):
 
 def tb_l1icache_rw(dut: L1ICache):
     cache = L1ICacheHarness(dut)
-    yield from cache.drive_write_port(1, 1, 0x4, [1,2,3,4])
+    yield from cache.drive_write_port(0, 1, 1, 0x4, [1,2,3,4])
     yield Tick()
-    yield from cache.clear_write_port()
-    yield from cache.drive_read_port(1)
+    yield from cache.clear_write_port(0)
+    yield from cache.drive_read_port(0, 1)
     yield Tick()
-    yield from cache.clear_read_port()
-    valid, tag_data, tag_valid, line_data = yield from cache.sample_read_port()
+    yield from cache.clear_read_port(0)
+    valid, tag_data, tag_valid, line_data = yield from cache.sample_read_port(0)
     assert valid == 1
     assert tag_valid[1] == 1
     assert tag_data[1] == 0x4
     assert line_data[1] == [1,2,3,4]
 
 def tb_l1ifill(dut: L1IFillUnit):
+    #log = logging.getLogger("tb_l1ifill")
     ram = FakeRam(0x0000_1000)
     ram.write_bytes(0, bytearray([i for i in range(1, 256)]))
 
+    yield dut.l1i_wp[0].resp.valid.eq(1)
+
+    ready = yield dut.sts.ready
+    assert ready == 1
+    
     yield dut.req.addr.eq(0x0000_0000)
     yield dut.req.way.eq(1)
     yield dut.req.valid.eq(1)
 
-    yield Tick()
-    yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
-    ready = yield dut.sts.ready
-    assert ready == 0
+    ready = 0
+    cyc = 0
+    while ready == 0:
+        if cyc >= 16:
+            assert 1==0, f"timeout after {cyc} cycles"
+        yield Tick()
+        yield dut.req.addr.eq(0x0000_0000)
+        yield dut.req.way.eq(0)
+        yield dut.req.valid.eq(0)
+        yield from ram.run(dut.fakeram[0].req, dut.fakeram[0].resp)
+        ready = yield dut.sts.ready
+        cyc += 1
+    #log.debug(f"Fill completed in {cyc} cycles")
 
-    yield Tick()
-    yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
     ready = yield dut.sts.ready
-    assert ready == 0
+    assert ready == 1, f"{ready}"
 
-    yield Tick()
-    yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
-    ready = yield dut.sts.ready
-    assert ready == 1
-
-    yield Tick()
-    yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
 
 class L1ICacheTests(unittest.TestCase):
 

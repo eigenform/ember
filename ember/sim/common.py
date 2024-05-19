@@ -1,5 +1,6 @@
 
 import inspect
+import logging
 from amaranth import *
 from amaranth.sim import *
 from amaranth.back import verilog, rtlil

@@ -182,20 +182,86 @@ class GrayDecoder(Elaboratable):
             m.d.comb += self.o[i].eq(rhs)
         return m
 
-class ChainedPriorityEncoder(Elaboratable):
-    """ A "chained" priority encoder selecting more than one bit.
+
+class EmberPriorityEncoder(Component):
+    """ A priority encoder.
+
+    Ports
+    =====
+    i:
+        Input bits (one-hot)
+    mask:
+        Output bits (one-hot)
+    o:
+        Output index (encoded)
+    valid:
+        High when at least one bit is valid in in the input
     """
-    def __init__(self, width: int, num_outputs: int):
+
+    class PriorityEncoderLayout(StructLayout):
+        def __init__(self, width: int):
+            super().__init__({
+                "mask":  unsigned(width),
+                "index": unsigned(ceil_log2(width)),
+            })
+
+    def __init__(self, width: int):
+        """ Create a new priority encoder. 
+
+        Parameters
+        ==========
+        width: 
+            The bit-width of the input value
+        """
+        assert width != 0
         self.width = width
-        self.num_outputs = num_outputs
-        self.i = Signal(width)
-        self.o = Array(Signal(width) for _ in range(num_outputs))
-        self.n = Array(Signal() for _ in range(num_outputs))
+        super().__init__(Signature({
+            "i": In(width),
+            "o": Out(ceil_log2(width)),
+            "mask": Out(width),
+            "valid": Out(1),
+        }))
 
     def elaborate(self, platform):
         m = Module()
+
+        if self.width == 1:
+            m.d.comb += self.o.eq(0)
+            m.d.comb += self.valid.eq(self.i)
+        else:
+            table = [
+                { "mask": C(1<<idx, self.width), 
+                  "index": C(idx, ceil_log2(self.width))
+                } for idx in range(self.width)
+            ]
+            values = [
+                C(table[idx], self.PriorityEncoderLayout(self.width))
+                for idx in range(self.width)
+            ]
+            pm = m.submodules.pm = \
+                PriorityMux(self.PriorityEncoderLayout(self.width), self.width)
+            m.d.comb += [
+                pm.val[idx].eq(values[idx]) for idx in range(self.width)
+            ]
+            m.d.comb += [
+                pm.sel[idx].eq(self.i[idx]) for idx in range(self.width)
+            ]
+            m.d.comb += [
+                self.o.eq(pm.output.index),
+                self.mask.eq(pm.output.mask),
+                self.valid.eq(pm.valid),
+            ]
+
+
+        #vals = [ C(idx, ceil_log2(self.width)) for idx in range(self.width) ]
+        #pm = m.submodules.pm = PriorityMux(ceil_log2(self.width), self.width)
+        #m.d.comb += [ pm.val[idx].eq(vals[idx]) for idx in range(self.width) ]
+        #m.d.comb += [ pm.sel[idx].eq(self.i[idx]) for idx in range(self.width) ]
+        #m.d.comb += [
+        #    self.o.eq(pm.output),
+        #    self.valid.eq(pm.valid),
+        #]
+
         return m
-
-
 
 

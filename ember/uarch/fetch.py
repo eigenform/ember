@@ -13,7 +13,19 @@ class FTQIndex(Shape):
 
 
 class FetchResponseStatus(Enum, shape=2):
-    """ Status of a fetch request that has passed through the IFU. """
+    """ Status of a fetch request that has passed through the IFU. 
+
+    Values
+    ======
+    NONE:
+    L1_HIT:
+        Request hit in the L1 instruction cache
+    L1_MISS:
+        Request missed in the L1 instruction cache
+    TLB_MISS:
+        Request missed in the L1I TLB
+
+    """
     NONE   = 0
     L1_HIT = 1
     L1_MISS = 2
@@ -22,8 +34,12 @@ class FetchResponseStatus(Enum, shape=2):
 class FetchRequest(Signature):
     """ A request to fetch a cache line at some virtual address. 
 
-    - ``vaddr``:    Virtual address of the requested cacheline
-    - ``passthru``: Bypass virtual-to-physical translation
+    Members
+    =======
+    vaddr:
+        Virtual address of the requested cacheline
+    passthru: 
+        Bypass virtual-to-physical translation
 
     """
     def __init__(self, p: EmberParams):
@@ -36,7 +52,22 @@ class FetchRequest(Signature):
         })
 
 class FetchResponse(Signature):
-    """ Response to a fetch request.  """
+    """ Response to a fetch request.
+
+    Members
+    =======
+    valid: 
+        This response is valid
+    vaddr:
+        Virtual address associated with this response
+    sts: :class:`FetchResponseStatus`
+        Status associated with this response
+    data:
+        Response data (an L1I cache line)
+    ftq_idx:
+        FTQ index responsible for the associated request
+
+    """
     def __init__(self, p: EmberParams):
         super().__init__({
             "valid": Out(1),

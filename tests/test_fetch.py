@@ -22,7 +22,7 @@ class FetchUnitHarness(Component):
             "fetch_resp": Out(FetchResponse(param)),
             "alloc_req": In(FTQAllocRequest(param)),
 
-            "fakeram": Out(FakeRamInterface()),
+            "fakeram": Out(FakeRamInterface()).array(1),
         })
         super().__init__(signature)
 
@@ -35,10 +35,10 @@ class FetchUnitHarness(Component):
         itlb  = m.submodules.itlb  = L1ICacheTLB(self.p.l1i)
         ifill = m.submodules.ifill = L1IFillUnit(self.p)
 
-        connect(m, ifu.l1i_rp, l1i.rp)
+        connect(m, ifu.l1i_rp, l1i.rp[0])
         connect(m, ifu.tlb_rp, itlb.rp)
         #connect(m, ifu.req, flipped(self.fetch_req))
-        #connect(m, ifu.resp, flipped(self.fetch_resp))
+        connect(m, ifu.resp, flipped(self.fetch_resp))
         connect(m, ftq.fetch_req, ifu.req)
         connect(m, ftq.fetch_resp, ifu.resp)
         connect(m, ftq.ifill_resp, ifill.resp)
@@ -46,8 +46,8 @@ class FetchUnitHarness(Component):
 
         connect(m, ifu.ifill_req, ifill.req)
         connect(m, ifu.ifill_sts, ifill.sts)
-        connect(m, ifill.l1i_wp, l1i.wp)
-        connect(m, ifill.fakeram, flipped(self.fakeram))
+        connect(m, ifill.l1i_wp[0], l1i.wp[0])
+        connect(m, ifill.fakeram[0], flipped(self.fakeram[0]))
         return m
 
 
@@ -59,23 +59,45 @@ def tb_fetch_simple(dut: FetchUnitHarness):
     yield dut.alloc_req.valid.eq(1)
     yield dut.alloc_req.passthru.eq(1)
     yield dut.alloc_req.vaddr.eq(0x0000_0000)
-
     yield Tick()
-    yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
-    yield dut.alloc_req.vaddr.eq(0x0000_0020)
-
-    yield Tick()
-    yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
-    yield dut.alloc_req.vaddr.eq(0x0000_0040)
-
     yield dut.alloc_req.valid.eq(0)
     yield dut.alloc_req.passthru.eq(0)
     yield dut.alloc_req.vaddr.eq(0x0000_0000)
 
-
-    for _ in range(32):
+    cyc = 0
+    done = False
+    while not done:
+        if cyc >= 16:
+            raise ValueError("fetch response timeout?")
         yield Tick()
-        yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
+        yield from ram.run(dut.fakeram[0].req, dut.fakeram[0].resp)
+        valid = yield dut.fetch_resp.valid
+        s = yield dut.fetch_resp.sts
+        sts = FetchResponseStatus(s)
+        done = (valid == 1) and (sts == FetchResponseStatus.L1_HIT)
+        cyc += 1
+
+    data = []
+    for i in range(4):
+        d = yield dut.fetch_resp.data[i]
+        data.append(d)
+    print(f"miss-to-hit in {cyc} cycles")
+    print([ f"{i:08x}" for i in data ])
+
+
+
+
+    #yield Tick()
+    #yield from ram.run(dut.fakeram[0].req, dut.fakeram[0].resp)
+    #yield dut.alloc_req.vaddr.eq(0x0000_0040)
+
+    #yield dut.alloc_req.valid.eq(0)
+    #yield dut.alloc_req.passthru.eq(0)
+    #yield dut.alloc_req.vaddr.eq(0x0000_0000)
+
+    #for _ in range(32):
+    #    yield Tick()
+    #    yield from ram.run(dut.fakeram[0].req, dut.fakeram[0].resp)
 
 
 class FetchUnitTests(unittest.TestCase):

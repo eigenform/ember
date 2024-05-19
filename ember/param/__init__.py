@@ -16,7 +16,14 @@ from ember.uarch.addr import *
 #            self.__setattr__(k, v)
 
 class RiscvParams(object):
-    """ RISC-V ISA parameters. """
+    """ RISC-V ISA parameters. 
+
+    Attributes
+    ==========
+    reset_vector:
+        The program counter value on reset
+
+    """
     xlen         = 32
     xlen_bits    = xlen
     xlen_bytes   = (xlen_bits // 8)
@@ -57,10 +64,16 @@ class L1IFillParams(object):
 class L1ICacheParams(object):
     """ L1 instruction cache parameters.
 
-    - ``num_sets``   - Number of sets
-    - ``num_ways``   - Number of ways
-    - ``word_width`` - Number of bits in a cache word
-    - ``line_depth`` - Number of words in a cache line
+    Parameters
+    ==========
+    num_sets: 
+        Number of sets
+    num_ways: 
+        Number of ways
+    word_width: 
+        Number of bits in a cache word
+    line_depth: 
+        Number of words in a cache line
     """
     def __init__(self, rv: RiscvParams, 
                  word_width: int, 
@@ -71,6 +84,12 @@ class L1ICacheParams(object):
         self.num_sets   = num_sets
         self.num_ways   = num_ways
         self.line_depth = line_depth
+
+        #self.num_banks = 4
+
+
+        self.num_rp = 1
+        self.num_wp = 1
 
         # L1I cache line 
         self.line_bits    = self.word_width * self.line_depth
@@ -110,14 +129,17 @@ class L1ICacheParams(object):
         )
 
         self.fill = L1IFillParams(
-            num_mshr=2,
+            num_mshr=1,
         )
 
 
 class FetchParams(object):
     """ Instruction fetch parameters.
 
-    - ``width`` - Number of instructions fetched per cycle
+    Parameters
+    ==========
+    width:
+        Number of instructions fetched per cycle
 
     """
     def __init__(self, rv: RiscvParams, width: int): 
@@ -133,7 +155,10 @@ class FetchParams(object):
 class DecodeParams(object):
     """ Instruction decode parameters.
 
-    - ``width`` - Number of instructions decoded per cycle
+    Parameters
+    ==========
+    width:
+        Number of instructions decoded per cycle
 
     """
     def __init__(self, rv: RiscvParams, width: int):
@@ -145,47 +170,48 @@ class EmberParams:
     For now, users are expected to manually change values in this class. 
     At some point, we ideally want this to be an object that a user can 
     construct and override while elaborating the design.
+
+    Attributes
+    ==========
+    superscalar_width:
+        The width of the instruction pipeline (in number of instructions).
+
+    inst: :class:`RvInstGroup`
+        The set of supported RISC-V instructions
+    mops: :class:`EmberMopGroup`
+        The set of supported macro-ops
+    vaddr: VirtualAddress
+        The layout for a virtual address.
+    paddr: PhysicalAddress
+        The layout for a physical address.
+
     """
-
-    # The width of the instruction pipeline (in number of instructions)
-    superscalar_width = 4
-
-    # The set of supported RISC-V instructions
-    inst: RvInstGroup   = RV32I_BASE_SET
-    # The set of supported macro-ops
-    mops: EmberMopGroup = DEFAULT_EMBER_MOPS
 
     # RISC-V ISA parameters
     rv = RiscvParams()
 
-    # L1I cache parameters
+    superscalar_width = 4
+    inst: RvInstGroup   = RV32I_BASE_SET
+    mops: EmberMopGroup = DEFAULT_EMBER_MOPS
+
+    # Module-specific parameters
     l1i = L1ICacheParams(rv,
         num_sets=32,
         num_ways=2,
         word_width=rv.xlen_bits,
         line_depth=superscalar_width,
     )
+    fetch = FetchParams(rv, width=superscalar_width)
+    decode = DecodeParams(rv, width=superscalar_width)
+    ibus = InstructionBusParams()
 
-    # Virtual address layout
     vaddr = VirtualAddress(
         l1i_line_bytes=l1i.line_bytes,
         l1i_num_sets=l1i.num_sets
     )
-
-    # Physical address layout
     paddr = PhysicalAddress(
         l1i_line_bytes=l1i.line_bytes,
         l1i_num_sets=l1i.num_sets
     )
-
-
-    # Instruction fetch parameters
-    fetch = FetchParams(rv, width=superscalar_width)
-
-    # Instruction decode parameters
-    decode = DecodeParams(rv, width=superscalar_width)
-
-    # Instruction bus parameters
-    ibus = InstructionBusParams()
 
 

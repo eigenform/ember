@@ -15,6 +15,16 @@ with open(".gitignore") as f:
 
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+]
+autodoc_member_order = "bysource"
+
+napoleon_numpy_docstring = True
+napoleon_custom_sections = [
+    ("Ports", "params_style"),
+    ("Values", "params_style"),
+    ("Fields", "params_style"),
+    ("Members", "params_style"),
 ]
 
 rst_prolog = """

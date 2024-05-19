@@ -20,27 +20,35 @@ class Queue(Component):
     Ports
     =====
 
-    - ``i_pop_size``: Number of entries being popped/consumed this cycle.
-    - ``i_push_size``: Number of entries being pushed this cycle.
-    - ``i_push_data``: Entry data being pushed this cycle.
-
-    - ``o_data``: The oldest entries in the queue.
-    - ``o_pop_limit``: Number of valid entries in ``o_data`` that are \
-            allowed to be popped this cycle. 
-    - ``o_push_limit``: Number of entries in ``i_push_data`` that are \
-            allowed to be pushed this cycle.
-
-    - ``o_overflow``: The push request on the previous cycle would have \
-            caused an overflow condition.
-    - ``o_underflow``: The pop request on the previous cycle would have \
-            caused an underflow condition.
+    i_pop_size:
+        Number of entries being popped/consumed this cycle.
+    i_push_size:
+        Number of entries being pushed this cycle.
+    i_push_data:
+        Entry data being pushed this cycle.
+    o_data:
+        The oldest entries in the queue.
+    o_pop_limit:
+        Number of valid entries in ``o_data`` that are
+        allowed to be popped this cycle. 
+    o_push_limit:
+        Number of entries in ``i_push_data`` that are
+        allowed to be pushed this cycle.
+    o_overflow:
+        The push request on the previous cycle would have
+        caused an overflow condition.
+    o_underflow:
+        The pop request on the previous cycle would have
+        caused an underflow condition.
 
 
     Parameters
     ==========
-    - The ``depth`` of the queue is the number of entries. 
-    - The ``width`` of the queue is the maximum number of entries that can 
-      potentially be enqueued/dequeued in a single cycle.  
+    depth:
+        The number of queue entries. 
+    width:
+        The maximum number of entries that can potentially 
+        be enqueued/dequeued in a single cycle.  
 
     """
     def __init__(self, depth: int, width: int, data_layout: Layout, debug=False):

@@ -32,6 +32,21 @@ class FetchUnit(Component):
     2. A miss in the L1I cache causes the request to stall for the availability
        of the associated cacheline. This causes an L1I fill request.
 
+    Ports
+    =====
+    req: :class:`FetchRequest`
+        Instruction fetch request
+    resp: 
+        Instruction fetch response
+    l1i_rp: :class:`ember.front.l1i.L1ICacheReadPort`
+        L1I cache read port
+    tlb_rp: :class:`ember.front.itlb.L1ICacheTLBReadPort`
+        L1I TLB read port
+    ifill_req: :class:`ember.front.ifill.L1IFillRequest`
+        L1I fill unit request
+    ifill_sts: :class:`ember.front.ifill.L1IFillStatus`
+        L1I fill unit status
+
     """
     def __init__(self, param: EmberParams):
         self.p = param

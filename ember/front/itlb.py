@@ -17,30 +17,30 @@ from ember.riscv.paging import *
 from ember.param import *
 
 
-class L1ICacheTLBRequest(Signature):
-    """ A request to L1I TLB to resolve the physical page number
-    for the provided virtual page number. 
-    """
-    def __init__(self, param: L1ICacheParams):
-        super().__init__({
-            'valid': Out(1),
-            'vpn': Out(VirtualPageNumberSv32()),
-        })
-
-class L1ICacheTLBResponse(Signature):
-    """ A response from the L1I TLB containing a physical page number. """
-    def __init__(self, param: L1ICacheParams):
-        super().__init__({
-            'valid': Out(1),
-            'hit': Out(1),
-            'pte': Out(PageTableEntrySv32()),
-        })
-
 class L1ICacheTLBReadPort(Signature):
+    """ L1I TLB read port. """
+    class Request(Signature):
+        """ A request to L1I TLB to resolve the physical page number
+        for the provided virtual page number. 
+        """
+        def __init__(self, param: L1ICacheParams):
+            super().__init__({
+                'valid': Out(1),
+                'vpn': Out(VirtualPageNumberSv32()),
+            })
+    class Response(Signature):
+        """ A response from the L1I TLB containing a physical page number. """
+        def __init__(self, param: L1ICacheParams):
+            super().__init__({
+                'valid': Out(1),
+                'hit': Out(1),
+                'pte': Out(PageTableEntrySv32()),
+            })
+
     def __init__(self, param: L1ICacheParams):
         super().__init__({
-            'req': Out(L1ICacheTLBRequest(param)),
-            'resp': In(L1ICacheTLBResponse(param)),
+            'req': Out(self.Request(param)),
+            'resp': In(self.Response(param)),
         })
 
 
@@ -68,6 +68,14 @@ class L1ICacheTLB(Component):
 
     At some point, this will probably be replaced with the tree-based 
     pseudo least-recently used (PLRU) policy.
+
+    Ports
+    =====
+    fill_req: :class:`L1ICacheTLBFillRequest`
+        Fill request
+
+    rp: :class:`L1ICacheTLBReadPort`
+        Read port
 
     """
 

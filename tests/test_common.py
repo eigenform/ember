@@ -13,23 +13,56 @@ from amaranth.back import verilog
 
 from ember.sim.common import *
 from ember.common import *
+from ember.common.mem import *
 from ember.common.coding import *
 
 class CommonUnitTests(unittest.TestCase):
     @staticmethod
-    def simulate(m):
+    def simulate_comb(m):
         def wrapper(fn):
             sim = Simulator(m)
             sim.add_testbench(fn)
             sim.run()
         return wrapper
 
+    @staticmethod
+    def simulate_sync(m):
+        def wrapper(fn):
+            sim = Simulator(m)
+            sim.add_testbench(fn)
+            sim.add_clock(1e-6)
+            sim.run()
+        return wrapper
+
+
+    def test_banked_mem(self):
+        dut = BankedMemory(4, 16, ArrayLayout(32, 4))
+        #print(verilog.convert(dut))
+
+        @self.simulate_sync(dut)
+        def bypass_rw():
+            yield dut.bank[0].wp.req.valid.eq(1)
+            yield dut.bank[0].wp.req.addr.eq(0)
+            for i in range(4):
+                yield dut.bank[0].wp.req.data[i].eq(i)
+            yield dut.bank[0].rp.req.valid.eq(1)
+            yield dut.bank[0].rp.req.addr.eq(0)
+
+            yield Tick()
+            for i in range(4):
+                v = yield dut.bank[0].rp.resp.data[i]
+                assert v == i
+            valid = yield dut.bank[0].rp.resp.valid
+            assert valid
+
+
+
     def test_priority_mux(self):
         m = PriorityMux(unsigned(4), 4)
         #v = verilog.convert(m, emit_src=True, strip_internal_attrs=True)
         #print(v)
 
-        @self.simulate(m)
+        @self.simulate_comb(m)
         def wow():
             # Works? 
             yield m.val[0].eq(0b0001)
@@ -63,17 +96,36 @@ class CommonUnitTests(unittest.TestCase):
 
 
 
-    def test_chained_priority_encoder(self):
-        dut = ChainedPriorityEncoder(8, 1)
+    def test_ember_priority_encoder(self):
+        dut = EmberPriorityEncoder(8)
+        #v = verilog.convert(dut, emit_src=False, strip_internal_attrs=True)
+        #print(v)
 
-        @self.simulate(dut)
+        @self.simulate_comb(dut)
         def it_works():
             yield dut.i.eq(0b1000_0000)
-            o = yield dut.o[0]
-            n = yield dut.n[0]
+            o = yield dut.o
+            m = yield dut.mask
+            n = yield dut.valid
             assert o == 7
-            assert n == 0
+            assert n == 1
+            assert m == 0b1000_0000
 
+            yield dut.i.eq(0b1000_0001)
+            o = yield dut.o
+            m = yield dut.mask
+            n = yield dut.valid
+            assert m == 0b0000_0001
+            assert o == 0
+            assert n == 1
+
+            yield dut.i.eq(0b0000_0000)
+            o = yield dut.o
+            m = yield dut.mask
+            n = yield dut.valid
+            assert m == 0b0000_0000
+            assert o == 0
+            assert n == 0
 
     def test_popcount(self):
         m = Module()
@@ -86,13 +138,13 @@ class CommonUnitTests(unittest.TestCase):
         #    "o": (m1.o, PortDirection.Output),
         #}))
 
-        @self.simulate(m)
+        @self.simulate_comb(m)
         def check_func():
             for x in range(32):
                 yield i_val.eq(x)
                 self.assertEqual((yield o_val), x.bit_count())
 
-        @self.simulate(m1)
+        @self.simulate_comb(m1)
         def check_foo():
             for x in range(32):
                 yield m1.i.eq(x)

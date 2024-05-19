@@ -13,18 +13,30 @@ from ember.front.ifill import *
 from ember.uarch.fetch import *
 
 class FTQEntryState(Enum, shape=3):
-    """ State of an FTQ entry. """
-    NONE       = 0
-    # Request is eligible for service by the IFU
-    PENDING    = 1
-    # Request is moving through the IFU
-    FETCH      = 2
-    # Request stalled for L1I miss
-    FILL_STALL = 3
-    # Request stalled for TLB miss
-    XLAT_STALL = 4
-    # Request completed
-    COMPLETE   = 5
+    """ State of an FTQ entry.
+
+    Values
+    ======
+    NONE:
+        FTQ entry is empty
+    PENDING:
+        Request is eligible for service by the IFU
+    FETCH:
+        Request is moving through the IFU
+    FILL:
+        Request stalled for L1I miss
+    XLAT:
+        Request stalled for TLB miss
+    COMPLETE:
+        Request completed
+
+    """
+    NONE     = 0
+    PENDING  = 1
+    FETCH    = 2
+    FILL     = 3
+    XLAT     = 4
+    COMPLETE = 5
 
 class FTQEntry(StructLayout):
     """ Layout of an entry in the Fetch Target Queue. 
@@ -36,7 +48,6 @@ class FTQEntry(StructLayout):
             "state": FTQEntryState,
             "passthru": unsigned(1),
             "id": FTQIndex(param),
-
         })
 
 class FTQAllocRequest(Signature):
@@ -80,6 +91,19 @@ class FetchTargetQueue(Component):
     - Decouples branch prediction from the IFU
     - Opportunistic prefetch for pending requests that are expected to miss
     - Opportunistic prefetch for predicted branch targets (!!)
+
+    Ports
+    =====
+    alloc_req:
+        Request to allocate a new FTQ entry
+    free_req:
+        Request to free an FTQ entry
+    fetch_req:
+        Instruction fetch request
+    fetch_resp:
+        Instruction fetch response
+    ifill_resp:
+        L1I fill unit response
 
     """
 
@@ -170,9 +194,9 @@ class FetchTargetQueue(Component):
             with m.Case(FetchResponseStatus.NONE):
                 m.d.comb += ifu_resp_state.eq(FTQEntryState.NONE)
             with m.Case(FetchResponseStatus.L1_MISS):
-                m.d.comb += ifu_resp_state.eq(FTQEntryState.FILL_STALL)
+                m.d.comb += ifu_resp_state.eq(FTQEntryState.FILL)
             with m.Case(FetchResponseStatus.TLB_MISS):
-                m.d.comb += ifu_resp_state.eq(FTQEntryState.XLAT_STALL)
+                m.d.comb += ifu_resp_state.eq(FTQEntryState.XLAT)
             with m.Case(FetchResponseStatus.L1_HIT):
                 m.d.comb += ifu_resp_state.eq(FTQEntryState.COMPLETE)
         
@@ -188,8 +212,8 @@ class FetchTargetQueue(Component):
                 data_arr[ifu_resp.ftq_idx].state.eq(ifu_resp_state),
             ]
             with m.Switch(ifu_resp_state):
-                with m.Case(FTQEntryState.FILL_STALL): pass
-                with m.Case(FTQEntryState.XLAT_STALL): pass
+                with m.Case(FTQEntryState.FILL): pass
+                with m.Case(FTQEntryState.XLAT): pass
                 with m.Case(FTQEntryState.COMPLETE): pass
                 with m.Default():
                     m.d.sync += [
