@@ -147,11 +147,12 @@ class L1ICache(Component):
         m.d.comb += [
             data_arr.rp.req.valid.eq(self.rp[0].req.valid),
             data_arr.rp.req.set.eq(self.rp[0].req.set),
+
             tag_arr.rp.req.valid.eq(self.rp[0].req.valid),
             tag_arr.rp.req.set.eq(self.rp[0].req.set),
+
             tag_arr.pp.req.valid.eq(self.pp[0].req.valid),
             tag_arr.pp.req.set.eq(self.pp[0].req.set),
-
         ]
 
         # Write port inputs
@@ -212,7 +213,10 @@ class L1IWaySelect(Component):
     def elaborate(self, platform):
         m = Module()
 
-        match_arr = Array(Signal(name=f"match_arr{way_idx}") for way_idx in range(self.num_ways))
+        match_arr = Array(
+            Signal(name=f"match_arr{way_idx}") 
+            for way_idx in range(self.num_ways)
+        )
         for way_idx in range(self.num_ways):
             m.d.comb += [
                 match_arr[way_idx].eq(
