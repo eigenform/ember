@@ -79,4 +79,68 @@ class Testbench(object):
             self.sim.run()
 
 
+class ClkTimer(object):
+    def __init__(self, name: str, start=None, limit=None):
+        self.name = name
+        self.start = start
+        self.limit = limit
+        self.end   = None
+    def is_done(self):
+        return (self.start != None) and (self.end != None)
+    def clear(self): 
+        self.start = None
+        self.end   = None
+    def elapsed(self): 
+        if not self.is_done():
+            return -1
+        else: 
+            return self.end - self.start
+
+class ClkMgr(object):
+    """ Simple book-keeping for timers during simulation. 
+    """
+    def __init__(self):
+        self.cycle = 0
+        self.events = {}
+
+    def start(self, name: str, limit=None): 
+        if name in self.events:
+            self.events[name].start = self.cycle
+        else: 
+            self.events[name] = ClkTimer(name, start=self.cycle, limit=limit)
+
+    def stop(self, name: str):
+        assert name in self.events
+        if self.events[name].end == None:
+            self.events[name].end = self.cycle
+
+    def elapsed(self, name: str):
+        return self.events[name].elapsed()
+
+    def step(self):
+        yield Tick()
+        self.cycle += 1
+        for name, event in self.events.items(): 
+            if (event.limit == None) or event.is_done(): 
+                continue
+            if (self.cycle - event.start) >= event.limit: 
+                raise ValueError("[ClkMgr] {:36} reached {}-cycle limit".format(
+                    name, event.limit
+                ))
+
+    def print_events(self):
+        for name, event in self.events.items():
+            if event.end == None:
+                print("[ClkMgr] {:36}: not completed".format(name))
+                continue
+
+            if event.limit == None:
+                print("[ClkMgr] {:36}: {} cycles elapsed".format(
+                    name, event.elapsed()
+                ))
+            else:
+                print("[ClkMgr] {:36}: {} cycles elapsed (limit={})".format(
+                    name, event.elapsed(), event.limit
+                ))
+
 
