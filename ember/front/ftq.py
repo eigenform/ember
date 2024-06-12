@@ -9,69 +9,54 @@ from ember.param import *
 from ember.front.l1i import *
 from ember.front.itlb import *
 from ember.front.ifill import *
+from ember.front.prefetch import *
 
 from ember.uarch.fetch import *
 
-class FTQEntryState(Enum, shape=3):
-    """ State of an FTQ entry.
-
-    Values
-    ======
-    NONE:
-        FTQ entry is empty
-    PENDING:
-        Request is eligible for service by the IFU
-    FETCH:
-        Request is moving through the IFU
-    FILL:
-        Request stalled for L1I miss
-    XLAT:
-        Request stalled for TLB miss
-    COMPLETE:
-        Request completed
-
-    """
-    NONE     = 0
-    PENDING  = 1
-    FETCH    = 2
-    FILL     = 3
-    XLAT     = 4
-    COMPLETE = 5
-
-class FTQEntry(StructLayout):
-    """ Layout of an entry in the Fetch Target Queue. 
-    """
-    def __init__(self, param: EmberParams):
-        super().__init__({
-            "vaddr": param.vaddr,
-            #"src": FTQEntrySource,
-            "state": FTQEntryState,
-            "passthru": unsigned(1),
-            "id": FTQIndex(param),
-        })
 
 class FTQAllocRequest(Signature):
     """ A request to allocate an FTQ entry.
 
-    - ``vaddr``: Virtual address of the requested cacheline
-    - ``src``: The event that generated this request
-    - ``passthru``: Treat this virtual address as a physical address
-
+    Members
+    =======
+    valid:
+        This request is valid
+    vaddr: 
+        Program counter value
+    passthru:
+        Treat this virtual address as a physical address
     """
     def __init__(self, param: EmberParams):
         super().__init__({
             "valid": Out(1),
             "passthru": Out(1),
             "vaddr": Out(param.vaddr),
-            #"src": Out(FTQEntrySource),
+            "predicted": Out(1),
         })
 
 class FTQFreeRequest(Signature):
-    """ A request to free an FTQ entry. """
+    """ A request to free an FTQ entry. 
+
+    Members
+    =======
+    valid:
+        This request is valid
+    id:
+        Index of the FTQ entry to be freed. 
+
+    """
     def __init__(self, param: EmberParams):
         super().__init__({
             "valid": Out(1),
             "id": Out(FTQIndex(param)),
+        })
+
+class FTQStatusBus(Signature):
+    def __init__(self, p: EmberParams):
+        super().__init__({
+            "ready": Out(1),
+            "next_ftq_idx": Out(FTQIndex(p)),
+
         })
 
 
@@ -79,31 +64,74 @@ class FTQFreeRequest(Signature):
 class FetchTargetQueue(Component):
     """ Logic for tracking outstanding fetch requests. 
 
-    1. Emit a request to the fetch unit 
-    2. Fetch unit responds with some status
-    3. Entries associated with L1I/TLB misses are parked until signals
-       from the L1I fill unit or PTW cause them to replay
+    This FTQ is implemented as a circular buffer that maintains pointers to 
+    the following entries:
 
-    Rationale & Notes
-    =================
-    - FTQ entries are MSHRs for the L1I, makes IFU non-blocking
-    - Decouples branch retire from the IFU
-    - Decouples branch prediction from the IFU
-    - Opportunistic prefetch for pending requests that are expected to miss
-    - Opportunistic prefetch for predicted branch targets (!!)
+    - The index of the next entry to be sent to the IFU pipe
+    - The index of the next entry to be sent to the PFU pipe
+    - The index of the next entry to be allocated
+    - The index of the next entry to be freed
+
+    Fetch Pointer
+    =============
+
+    The fetch pointer tracks the entry at head of the FTQ, which is the 
+    next to be fetched and sent to the mid-core for decoding. 
+
+    - When the entry is ``PENDING``: 
+
+      - Send a request to the IFU and mark as in-flight
+
+    - When the entry is ``FETCH``:
+
+      - Wait for the IFU to respond
+      - On a TLB miss, mark as ``XLAT``
+      - On an L1I miss, mark as ``FILL``
+      - On an L1I hit, increment the fetch pointer and mark as ``COMPLETE``
+      - On fill unit or PTW stall, mark as ``STALL``
+
+    - When the entry is ``FILL``:
+
+      - Wait for the fill unit to respond
+      - Return to the pending state (and replay)
+
+    - When the entry is ``XLAT``:
+
+      - Wait for the PTW to respond
+      - Return to the pending state (and replay)
+
+    - When the entry is ``STALL``: 
+
+      - Wait for either the PTW or fill unit to signal ready
+      - Mark as either ``XLAT`` or ``FILL``
+
+    - When the entry is ``COMPLETE``:
+
+      - Wait for the backend to release this entry 
+      - Return to the unallocated state
+
 
     Ports
     =====
+
     alloc_req:
-        Request to allocate a new FTQ entry
+        Request to allocate a new FTQ entry.
+
     free_req:
         Request to free an FTQ entry
+
     fetch_req:
-        Instruction fetch request
+        Output request to the IFU pipe
     fetch_resp:
-        Instruction fetch response
+        Input response from the IFU pipe
+
+    prefetch_req:
+        Output request to the PFU pipe
+    prefetch_resp:
+        Input response from the PFU pipe
+
     ifill_resp:
-        L1I fill unit response
+        L1I fill unit responses.
 
     """
 
@@ -111,13 +139,20 @@ class FetchTargetQueue(Component):
         self.p = param
         self.depth = param.fetch.ftq_depth
         signature = Signature({
+
+            "sts": Out(FTQStatusBus(param)),
+
             "alloc_req": In(FTQAllocRequest(param)),
+
             "free_req": In(FTQFreeRequest(param)),
 
             "fetch_req": Out(FetchRequest(param)),
             "fetch_resp": In(FetchResponse(param)),
 
-            "ifill_resp": In(L1IFillResponse(param)),
+            "prefetch_req": Out(PrefetchRequest(param)),
+            "prefetch_resp": In(PrefetchResponse(param)),
+
+            "ifill_resp": In(L1IFillResponse(param)).array(2),
         })
         super().__init__(signature)
 
@@ -130,66 +165,41 @@ class FetchTargetQueue(Component):
         )
 
         r_fptr = Signal(FTQIndex(self.p), init=0)
+        r_pptr = Signal(FTQIndex(self.p), init=1)
         r_wptr = Signal(FTQIndex(self.p), init=0)
         r_used = Signal(ceil_log2(self.depth+1), init=0)
-        full = (r_used == self.depth)
+        r_full = Signal()
 
-        # Allocate a new FTQ entry
-        alloc_ok = (self.alloc_req.valid & ~full)
+        next_wptr = r_wptr + 1
+        next_used = r_used + 1
+        can_alloc = (next_used <= self.depth)
+        alloc_ok  = (self.alloc_req.valid & can_alloc)
+
+        full      = (r_used == self.depth)
+        next_full = ((next_used == self.depth) & self.alloc_req.valid)
+        m.d.sync += r_full.eq(next_full | full)
+
+        m.d.comb += self.sts.ready.eq(~r_full)
+        m.d.comb += self.sts.next_ftq_idx.eq(r_wptr)
+
+        # Allocate new FTQ entries and increment the write pointer
+        new_entry = data_arr[r_wptr]
         with m.If(alloc_ok):
             m.d.sync += [
-                data_arr[r_wptr].vaddr.eq(self.alloc_req.vaddr),
-                data_arr[r_wptr].state.eq(FTQEntryState.PENDING),
-                data_arr[r_wptr].passthru.eq(self.alloc_req.passthru),
-                r_used.eq(r_used + 1),
-                r_wptr.eq(r_wptr + 1),
+                new_entry.vaddr.eq(self.alloc_req.vaddr),
+                new_entry.state.eq(FTQEntryState.PENDING),
+                new_entry.passthru.eq(self.alloc_req.passthru),
+                new_entry.predicted.eq(self.alloc_req.predicted),
+                r_wptr.eq(next_wptr),
+                r_used.eq(next_used),
             ]
 
-        # Compute the index of the entry sent to the IFU on the next cycle.
-        #
-        # FIXME: This is placeholder logic and is not correct: we're just 
-        # picking the pending entry with the lowest index in the FTQ 
-        m.submodules.pending_encoder = pending_encoder = \
-                PriorityEncoder(self.depth)
-        next_fptr = Signal(FTQIndex(self.p))
-        next_fptr_valid = Signal()
-        pending_arr = Array( 
-            Signal(name=f"pending_arr{idx}") for idx in range(self.depth)
-        )
-        m.d.comb += [
-            pending_arr[idx].eq(data_arr[idx].state == FTQEntryState.PENDING)
-            for idx in range(self.depth)
-        ]
-        m.d.comb += [
-            pending_encoder.i.eq(Cat(*pending_arr)),
-            next_fptr.eq(pending_encoder.o),
-            next_fptr_valid.eq(~pending_encoder.n),
-        ]
-        with m.If(next_fptr_valid):
-            m.d.sync += r_fptr.eq(next_fptr)
-
-
-        # On the next cycle, promote an FTQ entry to the 'FETCH' state and 
-        # send a request to the IFU on the next cycle. 
-        ifu_entry = data_arr[r_fptr]
-        with m.If(ifu_entry.state == FTQEntryState.PENDING):
-            m.d.sync += [
-                self.fetch_req.valid.eq(1),
-                self.fetch_req.vaddr.eq(ifu_entry.vaddr),
-                self.fetch_req.passthru.eq(ifu_entry.passthru),
-                data_arr[r_fptr].state.eq(FTQEntryState.FETCH),
-            ]
-        with m.Else():
-            m.d.sync += [
-                self.fetch_req.valid.eq(0),
-                self.fetch_req.vaddr.eq(0),
-                self.fetch_req.passthru.eq(0),
-            ]
-
-        # The IFU response determines the next state of the associated entry.
-        # Translate the IFU response to FTQ entry state. 
+        # Translate incoming IFU response to the next FTQ entry state. 
         ifu_resp = self.fetch_resp
         ifu_resp_state = Signal(FTQEntryState)
+        ifu_resp_hit = (
+            ifu_resp.valid & (ifu_resp.sts == FetchResponseStatus.L1_HIT)
+        )
         with m.Switch(ifu_resp.sts):
             with m.Case(FetchResponseStatus.NONE):
                 m.d.comb += ifu_resp_state.eq(FTQEntryState.NONE)
@@ -199,39 +209,143 @@ class FetchTargetQueue(Component):
                 m.d.comb += ifu_resp_state.eq(FTQEntryState.XLAT)
             with m.Case(FetchResponseStatus.L1_HIT):
                 m.d.comb += ifu_resp_state.eq(FTQEntryState.COMPLETE)
-        
-        ifu_resp_complete = (
-            ifu_resp.valid & (ifu_resp.sts == FetchResponseStatus.L1_HIT)
-        )
 
-        # When the IFU responds, change the state of the entry accordingly
-        #
-        # FIXME: Why are there unreachable cases? 
-        with m.If(ifu_resp.valid):
-            m.d.sync += [
-                data_arr[ifu_resp.ftq_idx].state.eq(ifu_resp_state),
-            ]
-            with m.Switch(ifu_resp_state):
-                with m.Case(FTQEntryState.FILL): pass
-                with m.Case(FTQEntryState.XLAT): pass
-                with m.Case(FTQEntryState.COMPLETE): pass
-                with m.Default():
+        # Translate incoming PFU probe response to the next FTQ entry state. 
+        pfu_resp = self.prefetch_resp
+        pfu_resp_state = Signal(FTQEntryState)
+        pfu_resp_hit = (
+            pfu_resp.valid & (ifu_resp.sts == FetchResponseStatus.L1_HIT)
+        )
+        with m.Switch(pfu_resp.sts):
+            with m.Case(FetchResponseStatus.NONE):
+                m.d.comb += pfu_resp_state.eq(FTQEntryState.NONE)
+            with m.Case(FetchResponseStatus.L1_MISS):
+                m.d.comb += pfu_resp_state.eq(FTQEntryState.FILL)
+            with m.Case(FetchResponseStatus.TLB_MISS):
+                m.d.comb += pfu_resp_state.eq(FTQEntryState.XLAT)
+            with m.Case(FetchResponseStatus.L1_HIT):
+                m.d.comb += pfu_resp_state.eq(FTQEntryState.PENDING)
+
+        # Default assignment for IFU/PFU request output
+        m.d.sync += [
+            self.fetch_req.valid.eq(0),
+            self.fetch_req.vaddr.eq(0),
+            self.fetch_req.passthru.eq(0),
+
+            self.prefetch_req.valid.eq(0),
+            self.prefetch_req.vaddr.eq(0),
+            self.prefetch_req.passthru.eq(0),
+        ]
+
+        # ----------------------------------------------------------------
+
+        # Pointer to the current entry moving through the IFU
+        ifu_entry = data_arr[r_fptr]
+
+        # Handle the current FTQ entry being fetched. 
+        with m.Switch(ifu_entry.state):
+            with m.Case(FTQEntryState.NONE): 
+                #m.d.sync += Print("No IFU entry this cycle?")
+                pass
+
+            # This entry is waiting to be sent to the IFU. 
+            # Setup to send on the next cycle. 
+            with m.Case(FTQEntryState.PENDING):
+                m.d.sync += [
+                    ifu_entry.state.eq(FTQEntryState.FETCH),
+                    self.fetch_req.valid.eq(1),
+                    self.fetch_req.vaddr.eq(ifu_entry.vaddr),
+                    self.fetch_req.passthru.eq(ifu_entry.passthru),
+                    self.fetch_req.ftq_idx.eq(r_fptr),
+                ]
+
+            # Entry is moving through the IFU pipe.
+            #
+            # When the IFU responds with a hit, increment the pointer.
+            # Otherwise, when the IFU responds with a miss, move to the 
+            # appropriate state. 
+            #
+            # Currently, the IFU is responsible for sending a signal to the
+            # PTW or fill unit on a miss (otherwise, the logic would be here).
+            with m.Case(FTQEntryState.FETCH):
+                with m.If(ifu_resp.valid):
                     m.d.sync += [
-                        Print(Format(
-                            "Unreachable FTQ state {} for IFU response",
-                            ifu_resp_state
-                        )),
-                        Assert(1 == 0),
+                        #Assert(r_fptr == ifu_resp.ftq_idx),
+                        ifu_entry.state.eq(ifu_resp_state),
+                    ]
+                with m.If(ifu_resp_hit):
+                    m.d.sync += r_fptr.eq(r_fptr + 1)
+
+            # Entry is moving through the fill unit. 
+            # When a matching response is received from the fill unit, 
+            # replay the IFU request on the next cycle. 
+            with m.Case(FTQEntryState.FILL):
+                ifill_match0 = (self.ifill_resp[0].ftq_idx == r_fptr)
+                ifill_match1 = (self.ifill_resp[1].ftq_idx == r_fptr)
+                resp_ok0 = (ifill_match0 & self.ifill_resp[0].valid)
+                resp_ok1 = (ifill_match1 & self.ifill_resp[1].valid)
+                with m.If(resp_ok0 | resp_ok1):
+                    m.d.sync += [
+                        #ifu_entry.state.eq(FTQEntryState.PENDING),
+                        ifu_entry.state.eq(FTQEntryState.FETCH),
+                        self.fetch_req.valid.eq(1),
+                        self.fetch_req.vaddr.eq(ifu_entry.vaddr),
+                        self.fetch_req.passthru.eq(ifu_entry.passthru),
+                        self.fetch_req.ftq_idx.eq(r_fptr),
                     ]
 
-        # When the L1I fill unit responds, promote the corresponding entry 
-        # to the pending state
-        with m.If(self.ifill_resp.valid):
-            m.d.sync += [
-                data_arr[self.ifill_resp.ftq_idx].state.eq(FTQEntryState.PENDING),
-            ]
-
+#        # ----------------------------------------------------------------
+#        # Pointer to the current entry moving through the PFU
+#        pfu_entry = data_arr[r_pptr]
+#
+#        # Handle the current FTQ entry being prefetched
+#        with m.Switch(pfu_entry.state):
+#            with m.Case(FTQEntryState.NONE):
+#                #m.d.sync += Print("No PFU entry this cycle?")
+#                pass
+#
+#            # The entry is waiting to begin prefetch. 
+#            # Start the prefetch request on the next cycle. 
+#            with m.Case(FTQEntryState.PENDING):
+#                m.d.sync += [ 
+#                    #Assert(pfu_entry.prefetched == 0, "already prefetched?"),
+#                    pfu_entry.state.eq(FTQEntryState.PREFETCH),
+#                    self.prefetch_req.valid.eq(1),
+#                    self.prefetch_req.vaddr.eq(pfu_entry.vaddr),
+#                    self.prefetch_req.passthru.eq(pfu_entry.passthru),
+#                    self.prefetch_req.ftq_idx.eq(r_pptr),
+#                ]
+#
+#            # Entry is moving through the PFU pipe. 
+#            #
+#            # When the PFU probe responds with a hit in the L1I, mark the 
+#            # entry as prefetched and increment the pointer. 
+#            #
+#            # Otherwise, if the PFU probe results in a miss, move to the 
+#            # appropriate state on the next cycle.
+#            with m.Case(FTQEntryState.PREFETCH): 
+#                with m.If(pfu_resp.valid):
+#                    m.d.sync += [
+#                        #Assert(r_pptr == pfu_resp.ftq_idx),
+#                        pfu_entry.state.eq(pfu_resp_state),
+#                    ]
+#                with m.If(pfu_resp_hit):
+#                    m.d.sync += r_pptr.eq(r_pptr + 1)
+#                    m.d.sync += pfu_entry.prefetched.eq(1)
+#
+#            # Entry is moving through the fill unit. 
+#            #
+#            # When a matching response is received from the fill unit, 
+#            # mark the entry as prefetched and increment the pointer. 
+#            with m.Case(FTQEntryState.FILL):
+#                ifill_match0 = (self.ifill_resp[0].ftq_idx == r_pptr)
+#                ifill_match1 = (self.ifill_resp[1].ftq_idx == r_pptr)
+#                resp_ok0 = (ifill_match0 & self.ifill_resp[0].valid)
+#                resp_ok1 = (ifill_match1 & self.ifill_resp[1].valid)
+#                with m.If(resp_ok0 | resp_ok1):
+#                    m.d.sync += pfu_entry.state.eq(FTQEntryState.PENDING)
+#                    m.d.sync += pfu_entry.prefetched.eq(1)
+#                    m.d.sync += r_pptr.eq(r_pptr + 1)
 
         return m
-
 

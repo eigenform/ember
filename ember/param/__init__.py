@@ -89,7 +89,7 @@ class L1ICacheParams(object):
 
 
         self.num_rp = 1
-        self.num_wp = 1
+        self.num_wp = 2
         self.num_pp = 1
 
         # L1I cache line 
@@ -104,13 +104,14 @@ class L1ICacheParams(object):
         )
 
         # Layout of a virtual address from the perspective of the L1I cache
-        self.vaddr_layout = StructLayout({
-            'wrd': unsigned(2),
-            'off': unsigned(self.num_off_bits),
-            'idx': unsigned(self.num_idx_bits),
-            'tag': unsigned(self.num_tag_bits),
-        })
-        assert self.vaddr_layout.size == self.addr_width
+        # FIXME: deprecated
+        #self.vaddr_layout = StructLayout({
+        #    'wrd': unsigned(2),
+        #    'off': unsigned(self.num_off_bits),
+        #    'idx': unsigned(self.num_idx_bits),
+        #    'tag': unsigned(self.num_tag_bits),
+        #})
+        #assert self.vaddr_layout.size == self.addr_width
 
         # Layout of an L1I cache line
         self.line_layout = ArrayLayout(
@@ -130,7 +131,7 @@ class L1ICacheParams(object):
         )
 
         self.fill = L1IFillParams(
-            num_mshr=1,
+            num_mshr=2,
         )
 
 
@@ -152,6 +153,12 @@ class FetchParams(object):
         self.width_bytes = width * rv.xlen_bytes
         # Number of low-order offset bits in a fetch address
         self.offset_bits = ceil_log2(self.width_bytes)
+
+class BranchPredictionParams(object):
+    def __init__(self, vaddr: VirtualAddress):
+        self.l0_btb_tag_shape = unsigned(vaddr.num_blk_bits)
+
+
 
 class DecodeParams(object):
     """ Instruction decode parameters.
@@ -191,7 +198,7 @@ class EmberParams:
     # RISC-V ISA parameters
     rv = RiscvParams()
 
-    superscalar_width = 4
+    superscalar_width = 8
     inst: RvInstGroup   = RV32I_BASE_SET
     mops: EmberMopGroup = DEFAULT_EMBER_MOPS
 
@@ -199,12 +206,9 @@ class EmberParams:
     l1i = L1ICacheParams(rv,
         num_sets=32,
         num_ways=2,
-        word_width=rv.xlen_bits,
-        line_depth=superscalar_width,
+        word_width=32,
+        line_depth=8,
     )
-    fetch = FetchParams(rv, width=superscalar_width)
-    decode = DecodeParams(rv, width=superscalar_width)
-    ibus = InstructionBusParams()
 
     vaddr = VirtualAddress(
         l1i_line_bytes=l1i.line_bytes,
@@ -214,5 +218,11 @@ class EmberParams:
         l1i_line_bytes=l1i.line_bytes,
         l1i_num_sets=l1i.num_sets
     )
+
+    bp     = BranchPredictionParams(vaddr)
+    fetch  = FetchParams(rv, width=superscalar_width)
+    decode = DecodeParams(rv, width=superscalar_width)
+    ibus   = InstructionBusParams()
+
 
 

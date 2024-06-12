@@ -66,13 +66,14 @@ class RvInst(object):
         for name, constraint in self.constraints.items():
             match name:
                 case "opcode_low": res.add_match_value(0, 2, constraint)
-                case "opcode": res.add_match_value(2, 5, constraint)
-                case "rd": res.add_match_value(7, 5, constraint)
-                case "rs1": res.add_match_value(15, 5, constraint)
-                case "f3": res.add_match_value(12, 3, constraint)
-                case "f7": res.add_match_value(25, 7, constraint)
-                case "f12": res.add_match_value(20, 12, constraint)
-                case _: raise ValueError(f"unknown field '{name}'")
+                case "opcode":     res.add_match_value(2, 5, constraint)
+                case "rd":         res.add_match_value(7, 5, constraint)
+                case "rs1":        res.add_match_value(15, 5, constraint)
+                case "f3":         res.add_match_value(12, 3, constraint)
+                case "f7":         res.add_match_value(25, 7, constraint)
+                case "f12":        res.add_match_value(20, 12, constraint)
+                case _: 
+                    raise ValueError(f"unknown field '{name}'")
         return res
 
 class RvInstGroup(object):
@@ -127,7 +128,8 @@ class RvInstGroup(object):
         return unsigned(len(self.members))
 
 RV32I_PSEUDO = RvInstGroup(members={
-    "NOP": RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.ADDI, rd=0,rs1=0,f12=0),
+    "NOP": RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.ADDI, rd=0b00000, rs1=0b00000, f12=0b0000_0000_0000),
+    "MV":  RvInst(RvFormat.I, RvOpcode.OPIMM, f3=F3OpImm.ADDI, f12=0b0000_0000_0000),
 })
 
 
@@ -177,12 +179,10 @@ RV32I_BASE_SET = RvInstGroup(members={
     "OR":     RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.OR,   f7=0b0000000),
     "AND":    RvInst(RvFormat.R, RvOpcode.OP, f3=F3Op.AND,  f7=0b0000000),
 
-    "FENCE":  RvInst(RvFormat.I, RvOpcode.MISCMEM, f3=0b000),
+    "FENCE":  RvInst(RvFormat.I, RvOpcode.MISCMEM, f3=0b000, rd=0b00000, rs1=0b00000),
 
-    "ECALL":  RvInst(RvFormat.I, RvOpcode.SYSTEM,  f3=0b000, 
-                     rd=0b00000, rs1=0b00000, f12=0b0000_0000_0000),
-    "EBREAK": RvInst(RvFormat.I, RvOpcode.SYSTEM,  f3=0b000,
-                     rd=0b00000, rs1=0b00000, f12=0b0000_0000_0001),
+    "ECALL":  RvInst(RvFormat.I, RvOpcode.SYSTEM,  f3=0b000, rd=0b00000, rs1=0b00000, f12=0b0000_0000_0000),
+    "EBREAK": RvInst(RvFormat.I, RvOpcode.SYSTEM,  f3=0b000, rd=0b00000, rs1=0b00000, f12=0b0000_0000_0001),
 })
 
 ZIFENCEI_SET = RvInstGroup(members={

@@ -14,13 +14,13 @@ from amaranth.back import verilog, rtlil
 def tb_decode_simple(dut: Rv32GroupDecoder):
     RvInstId = dut.p.inst.enum_type
 
-    yield dut.req.inst.eq(0xffff_f0b7)
+    yield dut.inst.eq(0xffff_f0b7)
     yield Delay(1)
 
-    alu_op = yield dut.resp.mop.alu_op
-    mop    = yield dut.resp.mop
-    mop_id = yield dut.resp.mop_id
-    valid  = yield dut.resp.valid
+    alu_op = yield dut.mop.alu_op
+    mop    = yield dut.mop
+    mop_id = yield dut.mop_id
+    valid  = yield dut.valid
     assert RvInstId(mop_id) == RvInstId.LUI
     assert AluOp(alu_op) == AluOp.ADD
     assert valid == 1
@@ -47,7 +47,7 @@ class DecodeUnitTests(unittest.TestCase):
     #def test_decode_elab(self):
     #    dut = Rv32GroupDecoder(EmberParams)
     #    with open("/tmp/Rv32Decoder.v", "w") as f:
-    #        f.write(verilog.convert(dut))
+    #        f.write(verilog.convert(dut, name="Rv32Decoder"))
 
     def test_decode_simple(self):
         tb = TestbenchComb(
@@ -57,3 +57,6 @@ class DecodeUnitTests(unittest.TestCase):
         )
         tb.run()
         return
+
+
+

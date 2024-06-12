@@ -1,3 +1,9 @@
+Branch Prediction Unit
+======================
+
+.. automodule:: ember.front.bpu
+   :members:
+
 Return Address Predictor
 ========================
 
@@ -17,7 +23,7 @@ instructions.
 2. When we encounter a return, predict with the most-recent previous 
    return address
 
-.. automodule:: ember.bp.rap
+.. automodule:: ember.front.bp.rap
    :members:
 
 

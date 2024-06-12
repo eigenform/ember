@@ -9,7 +9,7 @@ from amaranth_soc.wishbone import Interface as WishboneInterface
 from amaranth_soc.wishbone import Signature as WishboneSignature
 
 from ember.common import *
-from ember.common.coding import EmberPriorityEncoder
+from ember.common.coding import EmberPriorityEncoder, ChainedPriorityEncoder
 from ember.riscv.paging import *
 from ember.param import *
 from ember.front.l1i import L1ICacheWritePort
@@ -38,6 +38,16 @@ class L1IFillRequest(Signature):
         })
 
 class L1IFillResponse(Signature):
+    """ L1I instruction cache fill response. 
+
+    Members
+    =======
+    valid:
+        This response is valid
+    ftq_idx:
+        Index of the FTQ entry that generated the request
+    """
+
     def __init__(self, p: EmberParams):
         super().__init__({
             "valid": Out(1),
@@ -114,7 +124,7 @@ class L1IMissStatusHoldingRegister(Component):
             "req": In(L1IFillRequest(param)),
             "resp": Out(L1IFillResponse(param)),
             "l1i_wp": Out(L1ICacheWritePort(param)),
-            "fakeram": Out(FakeRamInterface()),
+            "fakeram": Out(FakeRamInterface(param.l1i.line_depth)),
         })
         super().__init__(signature)
         return
@@ -132,25 +142,32 @@ class L1IMissStatusHoldingRegister(Component):
         m.d.comb += self.ready.eq(ready)
 
         with m.Switch(state):
+
+            # Idle state.
+            # When we get a request, setup to start access on the next cycle.
             with m.Case(L1IMshrState.NONE):
                 with m.If(self.req.valid):
-                    #m.d.sync += Print("NONE => ACCESS")
                     m.d.sync += state.eq(L1IMshrState.ACCESS)
                     m.d.sync += ready.eq(0)
                     m.d.sync += addr.eq(self.req.addr)
                     m.d.sync += way.eq(self.req.way)
                     m.d.sync += ftq_idx.eq(self.req.ftq_idx)
 
+            # Interact with a memory device until we have a response.
+            # When we get a response [after *at least* one cycle], setup for 
+            # L1I writeback on the next cycle.
             with m.Case(L1IMshrState.ACCESS):
                 m.d.comb += [
                     self.fakeram.req.addr.eq(addr),
                     self.fakeram.req.valid.eq(1),
                 ]
                 with m.If(self.fakeram.resp.valid):
-                    #m.d.sync += Print("ACCESS => WRITEBACK")
                     m.d.sync += state.eq(L1IMshrState.WRITEBACK)
                     m.d.sync += data.eq(Cat(*self.fakeram.resp.data))
 
+            # Write the reponse data back to the L1I cache.
+            # When we get a response [after *at least* one cycle], setup for
+            # sending a fill response
             with m.Case(L1IMshrState.WRITEBACK):
                 m.d.comb += [
                     self.l1i_wp.req.valid.eq(1),
@@ -161,16 +178,19 @@ class L1IMissStatusHoldingRegister(Component):
                     self.l1i_wp.req.tag_data.valid.eq(1),
                 ]
                 with m.If(self.l1i_wp.resp.valid):
-                    #m.d.sync += Print("WRITEBACK => COMPLETE")
                     m.d.sync += state.eq(L1IMshrState.COMPLETE)
                     m.d.sync += self.resp.valid.eq(1)
                     m.d.sync += self.resp.ftq_idx.eq(ftq_idx)
 
+            # Send a fill response until we receive the complete signal.
+            # When we get the complete signal, reset to the idle state. 
             with m.Case(L1IMshrState.COMPLETE):
                 with m.If(self.complete):
-                    #m.d.sync += Print("COMPLETE => NONE")
                     m.d.sync += state.eq(L1IMshrState.NONE)
                     m.d.sync += ready.eq(1)
+                    m.d.sync += addr.eq(0)
+                    m.d.sync += way.eq(0)
+                    m.d.sync += ftq_idx.eq(0)
                     m.d.sync += self.resp.valid.eq(0)
                     m.d.sync += self.resp.ftq_idx.eq(0)
 
@@ -197,74 +217,95 @@ class L1IMshrArbiter(Component):
         Fill response wires for each MSHR
 
     """
-    def __init__(self, param: EmberParams, width: int):
+    def __init__(self, param: EmberParams, num_mshr: int, width: int):
+        self.p = param
+        self.num_mshr = num_mshr
         self.width = width
         sig = Signature({
             "ready": Out(1),
-            "req": In(L1IFillRequest(param)),
-            "resp": Out(L1IFillResponse(param)),
+            "ifill_req": In(L1IFillRequest(param)).array(2),
+            "ifill_resp": Out(L1IFillResponse(param)).array(2),
 
-            "mshr_ready": In(1).array(width),
-            "mshr_complete": Out(1).array(width),
-            "mshr_req": Out(L1IFillRequest(param)).array(width),
-            "mshr_resp": In(L1IFillResponse(param)).array(width),
+            "mshr_ready": In(1).array(num_mshr),
+            "mshr_complete": Out(1).array(num_mshr),
+            "mshr_req": Out(L1IFillRequest(param)).array(num_mshr),
+            "mshr_resp": In(L1IFillResponse(param)).array(num_mshr),
         })
         super().__init__(sig)
 
     def elaborate(self, platform):
         m = Module()
 
+        # Outgoing requests to MSHRs
+        req_arr = Array(L1IFillRequest(self.p).create() for _ in range(self.num_mshr))
+
+        # Incoming responses from MSHRs
+        resp_arr = Array(L1IFillResponse(self.p).flip().create() for _ in range(self.num_mshr))
+        ready_arr = Array(Signal() for _ in range(self.num_mshr))
+        complete_arr = Array(Signal() for _ in range(self.num_mshr))
+
+        for idx in range(self.num_mshr):
+            connect(m, req_arr[idx], flipped(self.mshr_req[idx]))
+            connect(m, flipped(self.mshr_resp[idx]), resp_arr[idx])
+            m.d.comb += [
+                self.mshr_complete[idx].eq(complete_arr[idx]),
+                ready_arr[idx].eq(self.mshr_ready[idx]),
+            ]
+
+        m.d.comb += self.ready.eq(Cat(ready_arr).any())
+
+
+        # Select free MSHRs 
         ready_enc = m.submodules.ready_encoder = \
-                EmberPriorityEncoder(self.width)
-        m.d.comb += [
-            ready_enc.i.eq(Cat(*self.mshr_ready)),
-            self.ready.eq(ready_enc.valid),
-        ]
+                ChainedPriorityEncoder(self.num_mshr, depth=2)
+        m.d.comb += ready_enc.i.eq(Cat(*ready_arr))
+        num_ready = popcount(Cat(*ready_enc.valid))
+        num_req   = popcount(Cat([self.ifill_req[ridx].valid for ridx in range(2)]))
 
-        for idx in range(self.width):
-            sel = (ready_enc.o == idx)
-            with m.If(ready_enc.valid & sel):
-                m.d.comb += [
-                    self.mshr_req[idx].valid.eq(self.req.valid),
-                    self.mshr_req[idx].addr.eq(self.req.addr),
-                    self.mshr_req[idx].way.eq(self.req.way),
-                    self.mshr_req[idx].ftq_idx.eq(self.req.ftq_idx),
-                ]
-            with m.Else():
-                m.d.comb += [
-                    self.mshr_req[idx].valid.eq(0),
-                    self.mshr_req[idx].addr.eq(0),
-                    self.mshr_req[idx].way.eq(0),
-                    self.mshr_req[idx].ftq_idx.eq(0),
-                ]
-
-        valids = Array(Signal() for _ in range(self.width))
-        m.d.comb += [
-            valids[idx].eq(self.mshr_resp[idx].valid) 
-            for idx in range(self.width)
-        ]
+        # Select completed MSHRs
         complete_enc = m.submodules.complete_encoder = \
-                EmberPriorityEncoder(self.width)
-        m.d.comb += [
-            complete_enc.i.eq(Cat(*valids)),
-        ]
-        for idx in range(self.width):
-            sel = (complete_enc.o == idx)
-            with m.If(complete_enc.valid & sel):
+                ChainedPriorityEncoder(self.num_mshr, depth=2)
+
+        valids = [ resp_arr[idx].valid for idx in range(self.num_mshr) ]
+        m.d.comb += complete_enc.i.eq(Cat(*valids))
+        num_complete = popcount(Cat(*complete_enc.valid))
+        #num_resp   = popcount(Cat([self.resp[ridx].valid for ridx in range(2)]))
+
+        #for i in range(2):
+        #    m.d.comb += [
+        #        Print(Format("IFILL complete slot {}: idx={},valid={}",
+        #            idx, complete_enc.o[idx],complete_enc.valid[idx]
+        #        ))
+        #    ]
+
+        # Default assignment
+        for idx in range(self.num_mshr):
+            m.d.comb += [
+                req_arr[idx].valid.eq(0),
+                req_arr[idx].addr.eq(0),
+                req_arr[idx].way.eq(0),
+                req_arr[idx].ftq_idx.eq(0),
+                complete_arr[idx].eq(0),
+            ]
+
+        for ridx in range(2):
+            # Allocate
+            with m.If(self.ifill_req[ridx].valid & ready_enc.valid[ridx]):
+                mshr_idx = ready_enc.o[ridx]
                 m.d.comb += [
-                    self.mshr_complete[idx].eq(1),
-                    self.resp.valid.eq(self.mshr_resp[idx].valid),
-                    self.resp.ftq_idx.eq(self.mshr_resp[idx].ftq_idx),
+                    req_arr[mshr_idx].valid.eq(self.ifill_req[ridx].valid),
+                    req_arr[mshr_idx].addr.eq(self.ifill_req[ridx].addr),
+                    req_arr[mshr_idx].way.eq(self.ifill_req[ridx].way),
+                    req_arr[mshr_idx].ftq_idx.eq(self.ifill_req[ridx].ftq_idx),
                 ]
-            with m.Else():
+            # Complete
+            with m.If(complete_enc.valid[ridx]):
+                mshr_idx = complete_enc.o[ridx]
                 m.d.comb += [
-                    self.mshr_complete[idx].eq(0),
-                    self.resp.valid.eq(0),
-                    self.resp.ftq_idx.eq(0),
+                    complete_arr[mshr_idx].eq(1),
+                    self.ifill_resp[ridx].valid.eq(resp_arr[mshr_idx].valid),
+                    self.ifill_resp[ridx].ftq_idx.eq(resp_arr[mshr_idx].ftq_idx),
                 ]
-
-
-
 
         return m
 
@@ -300,9 +341,9 @@ class L1IFillUnit(Component):
         signature = Signature({
             "sts":     Out(L1IFillStatus(param)),
             "l1i_wp":  Out(L1ICacheWritePort(param)).array(num_mshr),
-            "req":      In(L1IFillRequest(param)),
-            "resp":    Out(L1IFillResponse(param)),
-            "fakeram": Out(FakeRamInterface()).array(num_mshr),
+            "req":      In(L1IFillRequest(param)).array(2),
+            "resp":    Out(L1IFillResponse(param)).array(2),
+            "fakeram": Out(FakeRamInterface(param.l1i.line_depth)).array(num_mshr),
         })
         super().__init__(signature)
 
@@ -316,11 +357,14 @@ class L1IFillUnit(Component):
             x = m.submodules[f"mshr{idx}"] = L1IMissStatusHoldingRegister(self.p)
             mshr.append(x)
 
-        # Deliver the incoming request to an available MSHR
         arb = m.submodules.arb = \
-                L1IMshrArbiter(self.p, self.p.l1i.fill.num_mshr)
-        connect(m, arb.req, flipped(self.req))
-        connect(m, arb.resp, flipped(self.resp))
+                L1IMshrArbiter(self.p, width=2, num_mshr=self.p.l1i.fill.num_mshr)
+
+        # Connect MSHRs to the arbiter
+        connect(m, arb.ifill_req[0], flipped(self.req[0]))
+        connect(m, arb.ifill_req[1], flipped(self.req[1]))
+        connect(m, arb.ifill_resp[0], flipped(self.resp[0]))
+        connect(m, arb.ifill_resp[1], flipped(self.resp[1]))
 
         # FIXME: Each MSHR has its own L1I write port and memory interface? 
         for idx in range(self.p.l1i.fill.num_mshr):
@@ -330,8 +374,6 @@ class L1IFillUnit(Component):
             connect(m, mshr[idx].resp, arb.mshr_resp[idx])
             connect(m, mshr[idx].l1i_wp, flipped(self.l1i_wp[idx]))
             connect(m, mshr[idx].fakeram, flipped(self.fakeram[idx]))
-
-
 
         m.d.comb += self.sts.ready.eq(arb.ready)
 

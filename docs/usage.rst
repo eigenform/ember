@@ -29,13 +29,16 @@ You can get a list of all available build scripts like this:
     $ pdm run --list
 
 At this point in the project, we're really only concerned with running tests 
-and rendering some components into a Verilog representation: 
+in simulation: 
 
 .. code-block:: bash
 
     # Run unit tests
-    $ pdm test-code
+    $ pdm test-module
 
-    # Emit Verilog
-    $ pdm emit-verilog
+    # Run behavioral tests
+    $ pdm test-pipeline
+
+    # Run all tests
+    $ pdm test
 

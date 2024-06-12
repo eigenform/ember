@@ -63,7 +63,7 @@ class CommonUnitTests(unittest.TestCase):
         #print(v)
 
         @self.simulate_comb(m)
-        def wow():
+        def _1():
             # Works? 
             yield m.val[0].eq(0b0001)
             yield m.val[1].eq(0b0010)
@@ -102,7 +102,7 @@ class CommonUnitTests(unittest.TestCase):
         #print(v)
 
         @self.simulate_comb(dut)
-        def it_works():
+        def _1():
             yield dut.i.eq(0b1000_0000)
             o = yield dut.o
             m = yield dut.mask
@@ -127,6 +127,25 @@ class CommonUnitTests(unittest.TestCase):
             assert o == 0
             assert n == 0
 
+    def test_chained_priority_encoder(self):
+        dut = ChainedPriorityEncoder(8, depth=3)
+
+        @self.simulate_comb(dut)
+        def _1():
+            yield dut.i.eq(0b1000_1001)
+            results = []
+            for idx in range(3):
+                o = yield dut.o[idx]
+                valid = yield dut.valid[idx]
+                mask = yield dut.mask[idx]
+                results.append((o, valid, mask))
+            assert results == [
+                (0, 1, 0b0000_0001),
+                (3, 1, 0b0000_1000),
+                (7, 1, 0b1000_0000),
+            ]
+
+
     def test_popcount(self):
         m = Module()
         i_val = Signal(5)
@@ -139,13 +158,13 @@ class CommonUnitTests(unittest.TestCase):
         #}))
 
         @self.simulate_comb(m)
-        def check_func():
+        def _1():
             for x in range(32):
                 yield i_val.eq(x)
                 self.assertEqual((yield o_val), x.bit_count())
 
         @self.simulate_comb(m1)
-        def check_foo():
+        def _2():
             for x in range(32):
                 yield m1.i.eq(x)
                 self.assertEqual((yield m1.o), x.bit_count())

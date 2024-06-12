@@ -72,9 +72,11 @@ class L1ICacheDataArray(Component):
 
     def __init__(self, param: EmberParams):
         self.p = param
+        self.num_rp = param.l1i.num_rp
+        self.num_wp = param.l1i.num_wp
         sig = Signature({
-            "rp": In(L1IArrayReadPort(param, param.l1i.line_layout)),
-            "wp": In(L1IArrayWritePort(param, param.l1i.line_layout)),
+            "rp": In(L1IArrayReadPort(param, param.l1i.line_layout)).array(self.num_rp),
+            "wp": In(L1IArrayWritePort(param, param.l1i.line_layout)).array(self.num_wp),
         })
         super().__init__(sig)
 
@@ -87,20 +89,24 @@ class L1ICacheDataArray(Component):
                 depth=self.p.l1i.num_sets,
                 init=[],
             )
-            rp = mem.read_port()
-            m.d.comb += [
-                self.rp.resp.data[way_idx].eq(rp.data),
-                rp.en.eq(self.rp.req.valid),
-                rp.addr.eq(self.rp.req.set),
-            ]
-            wp = mem.write_port()
-            sel_way = Signal(name=f"wp_sel_way{way_idx}")
-            m.d.comb += [
-                sel_way.eq(self.wp.req.way == way_idx),
-                wp.en.eq(self.wp.req.valid & sel_way),
-                wp.addr.eq(Mux(sel_way, self.wp.req.idx, 0)),
-                wp.data.eq(Mux(sel_way, self.wp.req.data, 0)),
-            ]
+
+            for idx in range(self.num_rp):
+                rp = mem.read_port()
+                m.d.comb += [
+                    self.rp[idx].resp.data[way_idx].eq(rp.data),
+                    rp.en.eq(self.rp[idx].req.valid),
+                    rp.addr.eq(self.rp[idx].req.set),
+                ]
+
+            for idx in range(self.num_wp):
+                wp = mem.write_port()
+                sel_way = Signal(name=f"wp{idx}_sel_way{way_idx}")
+                m.d.comb += [
+                    sel_way.eq(self.wp[idx].req.way == way_idx),
+                    wp.en.eq(self.wp[idx].req.valid & sel_way),
+                    wp.addr.eq(Mux(sel_way, self.wp[idx].req.idx, 0)),
+                    wp.data.eq(Mux(sel_way, self.wp[idx].req.data, 0)),
+                ]
 
         return m
 
@@ -114,7 +120,10 @@ class L1ICacheTagArray(Component):
 
     Read ports perform reads from particular set across all ways.
     Write ports perform writes to a particular set and way. 
+    The probe ports are read ports dedicated for prefetch probes.
+
     For now, there is only one read port and one write port. 
+
 
     Ports
     =====
@@ -127,10 +136,14 @@ class L1ICacheTagArray(Component):
     """
     def __init__(self, param: EmberParams):
         self.p = param
+        self.num_rp = param.l1i.num_rp
+        self.num_wp = param.l1i.num_wp
+        self.num_pp = param.l1i.num_pp
+
         sig = Signature({
-            "rp": In(L1IArrayReadPort(param, param.l1i.tag_layout)),
-            "wp": In(L1IArrayWritePort(param, param.l1i.tag_layout)),
-            "pp": In(L1IArrayReadPort(param, param.l1i.tag_layout)),
+            "rp": In(L1IArrayReadPort(param, param.l1i.tag_layout)).array(self.num_rp),
+            "wp": In(L1IArrayWritePort(param, param.l1i.tag_layout)).array(self.num_wp),
+            "pp": In(L1IArrayReadPort(param, param.l1i.tag_layout)).array(self.num_pp),
         })
         super().__init__(sig)
 
@@ -144,33 +157,36 @@ class L1ICacheTagArray(Component):
                 init=[],
             )
 
-            rp = mem.read_port()
-            tag_data = Signal(self.p.l1i.tag_layout)
-            m.d.comb += [
-                tag_data.eq(rp.data),
-                rp.en.eq(self.rp.req.valid),
-                rp.addr.eq(self.rp.req.set),
-                self.rp.resp.data[way_idx].eq(tag_data),
-            ]
+            for idx in range(self.num_rp):
+                rp = mem.read_port()
+                tag_data = Signal(self.p.l1i.tag_layout)
+                m.d.comb += [
+                    tag_data.eq(rp.data),
+                    rp.en.eq(self.rp[idx].req.valid),
+                    rp.addr.eq(self.rp[idx].req.set),
+                    self.rp[idx].resp.data[way_idx].eq(tag_data),
+                ]
 
-            pp = mem.read_port()
-            tag_data = Signal(self.p.l1i.tag_layout)
-            m.d.comb += [
-                tag_data.eq(pp.data),
-                pp.en.eq(self.pp.req.valid),
-                pp.addr.eq(self.pp.req.set),
-                self.pp.resp.data[way_idx].eq(tag_data),
-            ]
+            for idx in range(self.num_pp):
+                pp = mem.read_port()
+                tag_data = Signal(self.p.l1i.tag_layout)
+                m.d.comb += [
+                    tag_data.eq(pp.data),
+                    pp.en.eq(self.pp[idx].req.valid),
+                    pp.addr.eq(self.pp[idx].req.set),
+                    self.pp[idx].resp.data[way_idx].eq(tag_data),
+                ]
 
 
-            wp = mem.write_port()
-            sel_way = Signal(name=f"wp_sel_way{way_idx}")
-            m.d.comb += [
-                sel_way.eq(self.wp.req.way == way_idx),
-                wp.en.eq(self.wp.req.valid & sel_way),
-                wp.addr.eq(Mux(sel_way, self.wp.req.idx, 0)),
-                wp.data.eq(Mux(sel_way, self.wp.req.data, 0)),
-            ]
+            for idx in range(self.num_wp):
+                wp = mem.write_port()
+                sel_way = Signal(name=f"wp{idx}_sel_way{way_idx}")
+                m.d.comb += [
+                    sel_way.eq(self.wp[idx].req.way == way_idx),
+                    wp.en.eq(self.wp[idx].req.valid & sel_way),
+                    wp.addr.eq(Mux(sel_way, self.wp[idx].req.idx, 0)),
+                    wp.data.eq(Mux(sel_way, self.wp[idx].req.data, 0)),
+                ]
         return m
 
 

@@ -252,16 +252,44 @@ class EmberPriorityEncoder(Component):
                 self.valid.eq(pm.valid),
             ]
 
+        return m
 
-        #vals = [ C(idx, ceil_log2(self.width)) for idx in range(self.width) ]
-        #pm = m.submodules.pm = PriorityMux(ceil_log2(self.width), self.width)
-        #m.d.comb += [ pm.val[idx].eq(vals[idx]) for idx in range(self.width) ]
-        #m.d.comb += [ pm.sel[idx].eq(self.i[idx]) for idx in range(self.width) ]
-        #m.d.comb += [
-        #    self.o.eq(pm.output),
-        #    self.valid.eq(pm.valid),
-        #]
+class ChainedPriorityEncoder(Component):
+    def __init__(self, width: int, depth: int):
+        assert depth >= 2, "Use EmberPriorityEncoder for cases where depth=1"
+        self.depth = depth
+        self.width = width
+        sig = Signature({
+            "i": In(width),
+            "o": Out(ceil_log2(width)).array(depth),
+            "mask": Out(width).array(depth),
+            "valid": Out(1).array(depth),
+        })
+        super().__init__(sig)
+
+    def elaborate(self, platform):
+        m = Module()
+
+        encs = [ EmberPriorityEncoder(self.width) for _ in range(self.depth) ]
+
+        mask_input = [ Signal(self.width) for _ in range(self.depth) ]
+        for idx in range(self.depth):
+            m.submodules[f"enc{idx}"] = encs[idx]
+
+        m.d.comb += encs[0].i.eq(self.i)
+        m.d.comb += mask_input[0].eq(self.i & ~encs[0].mask)
+
+        for idx in range(1, self.depth):
+            m.d.comb += encs[idx].i.eq(mask_input[idx-1])
+            m.d.comb += mask_input[idx].eq(mask_input[idx-1] & ~encs[idx].mask)
+
+        for idx in range(self.depth):
+            m.d.comb += self.mask[idx].eq(encs[idx].mask)
+            m.d.comb += self.o[idx].eq(encs[idx].o)
+            m.d.comb += self.valid[idx].eq(encs[idx].valid)
 
         return m
+
+
 
 

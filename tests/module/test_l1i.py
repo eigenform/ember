@@ -18,22 +18,22 @@ from amaranth.back import verilog, rtlil
 from struct import pack, unpack
 
 def tb_data_array_rw(dut: L1ICacheDataArray):
-    yield dut.wp.req.valid.eq(1)
-    yield dut.wp.req.data[0].eq(0xdeadc0de)
+    yield dut.wp[0].req.valid.eq(1)
+    yield dut.wp[0].req.data[0].eq(0xdeadc0de)
 
     yield Tick()
-    yield dut.wp.req.valid.eq(0)
-    yield dut.wp.req.data[0].eq(0)
-    yield dut.rp.req.valid.eq(1)
-    yield dut.rp.req.set.eq(0)
+    yield dut.wp[0].req.valid.eq(0)
+    yield dut.wp[0].req.data[0].eq(0)
+    yield dut.rp[0].req.valid.eq(1)
+    yield dut.rp[0].req.set.eq(0)
 
-    data = yield dut.rp.resp.data[0][0]
+    data = yield dut.rp[0].resp.data[0][0]
     assert data == 0x00000000
 
     yield Tick()
-    yield dut.rp.req.valid.eq(0)
-    yield dut.rp.req.set.eq(0)
-    data = yield dut.rp.resp.data[0][0]
+    yield dut.rp[0].req.valid.eq(0)
+    yield dut.rp[0].req.set.eq(0)
+    data = yield dut.rp[0].resp.data[0][0]
     assert data == 0xdeadc0de
 
 
@@ -55,10 +55,13 @@ def tb_l1itlb(dut: L1ICacheTLB):
     yield dut.fill_req.vpn.eq(0)
     yield dut.rp.req.valid.eq(1)
     yield dut.rp.req.vpn.eq(0x2002)
+    yield dut.pp.req.valid.eq(1)
+    yield dut.pp.req.vpn.eq(0x1001)
+
     valid = yield dut.rp.resp.valid
     pte   = yield dut.rp.resp.pte
-    assert valid == 1
     assert pte == 0x1111_1111
+    assert valid == 1
 
     yield Tick()
     yield dut.rp.req.valid.eq(0)
@@ -67,13 +70,18 @@ def tb_l1itlb(dut: L1ICacheTLB):
     pte   = yield dut.rp.resp.pte
     assert valid == 1
     assert pte == 0x2222_2222
+    valid = yield dut.pp.resp.valid
+    pte   = yield dut.pp.resp.pte
+    assert valid == 1
+    assert pte == 0x1111_1111
+
 
 class L1ICacheHarness(object):
     def __init__(self, dut: L1ICache):
         self.dut = dut
 
     def drive_write_port(self, wp_idx, set_idx, way_idx, tag, line):
-        assert len(line) == 4
+        assert len(line) == EmberParams().l1i.line_depth
         yield self.dut.wp[wp_idx].req.valid.eq(1)
         yield self.dut.wp[wp_idx].req.set.eq(set_idx)
         yield self.dut.wp[wp_idx].req.way.eq(way_idx)
@@ -83,6 +91,10 @@ class L1ICacheHarness(object):
         yield self.dut.wp[wp_idx].req.line_data[1].eq(line[1])
         yield self.dut.wp[wp_idx].req.line_data[2].eq(line[2])
         yield self.dut.wp[wp_idx].req.line_data[3].eq(line[3])
+        yield self.dut.wp[wp_idx].req.line_data[4].eq(line[4])
+        yield self.dut.wp[wp_idx].req.line_data[5].eq(line[5])
+        yield self.dut.wp[wp_idx].req.line_data[6].eq(line[6])
+        yield self.dut.wp[wp_idx].req.line_data[7].eq(line[7])
 
     def clear_write_port(self, wp_idx):
         yield self.dut.wp[wp_idx].req.valid.eq(0)
@@ -137,7 +149,7 @@ class L1ICacheHarness(object):
 
 def tb_l1icache_rw(dut: L1ICache):
     cache = L1ICacheHarness(dut)
-    yield from cache.drive_write_port(0, 1, 1, 0x4, [1,2,3,4])
+    yield from cache.drive_write_port(0, 1, 1, 0x4, [1,2,3,4,5,6,7,8])
 
     yield Tick()
     yield from cache.clear_write_port(0)
@@ -150,7 +162,7 @@ def tb_l1icache_rw(dut: L1ICache):
     assert valid == 1
     assert tag_valid[1] == 1
     assert tag_data[1] == 0x4
-    assert line_data[1] == [1,2,3,4]
+    assert line_data[1] == [1,2,3,4,5,6,7,8]
 
     valid, tag_data, tag_valid = yield from cache.sample_probe_port(0)
     assert valid == 1
@@ -168,9 +180,9 @@ def tb_l1ifill(dut: L1IFillUnit):
     ready = yield dut.sts.ready
     assert ready == 1
     
-    yield dut.req.addr.eq(0x0000_0000)
-    yield dut.req.way.eq(1)
-    yield dut.req.valid.eq(1)
+    yield dut.req[0].addr.eq(0x0000_0000)
+    yield dut.req[0].way.eq(1)
+    yield dut.req[0].valid.eq(1)
 
     ready = 0
     cyc = 0
@@ -178,9 +190,9 @@ def tb_l1ifill(dut: L1IFillUnit):
         if cyc >= 16:
             assert 1==0, f"timeout after {cyc} cycles"
         yield Tick()
-        yield dut.req.addr.eq(0x0000_0000)
-        yield dut.req.way.eq(0)
-        yield dut.req.valid.eq(0)
+        yield dut.req[0].addr.eq(0x0000_0000)
+        yield dut.req[0].way.eq(0)
+        yield dut.req[0].valid.eq(0)
         yield from ram.run(dut.fakeram[0].req, dut.fakeram[0].resp)
         ready = yield dut.sts.ready
         cyc += 1

@@ -12,6 +12,7 @@ from ember.front.l1i import *
 from ember.front.itlb import *
 from ember.front.ifill import *
 from ember.front.ftq import *
+from ember.front.predecode import *
 from ember.riscv.paging import *
 from ember.sim.fakeram import *
 
@@ -46,18 +47,22 @@ class FetchUnit(Component):
         L1I fill unit request
     ifill_sts: :class:`ember.front.ifill.L1IFillStatus`
         L1I fill unit status
+    pd_req:
+        Request to predecode a cacheline
+    result:
+        Output cacheline
 
     """
     def __init__(self, param: EmberParams):
         self.p = param
 
+        self.lfsr = LFSR(degree=4)
         self.stage = PipelineStages()
         self.stage.add_stage(1, {
             "vaddr": self.p.vaddr,
             "ftq_idx": FTQIndex(self.p),
             "passthru": unsigned(1),
         })
-        self.lfsr = LFSR(degree=4)
 
         signature = Signature({
             "req": In(FetchRequest(param)),
@@ -68,6 +73,9 @@ class FetchUnit(Component):
 
             "ifill_req": Out(L1IFillRequest(param)),
             "ifill_sts": In(L1IFillStatus(param)),
+
+            "pd_req": Out(PredecodeRequest(param)),
+            "result": Out(FetchData(param)),
         })
         super().__init__(signature)
 
@@ -188,17 +196,35 @@ class FetchUnit(Component):
             self.ifill_req.valid.eq(ifill_req_valid),
             self.ifill_req.addr.eq(paddr_sel),
             self.ifill_req.way.eq(self.lfsr.value),
+            self.ifill_req.ftq_idx.eq(ftq_idx),
         ]
 
         # FIXME: Inputs to the PTW
         m.d.sync += [
         ]
 
+        # Inputs to the predecode unit
+        hit_valid = (sts == FetchResponseStatus.L1_HIT)
+        m.d.sync += [
+            self.pd_req.cline.eq(tag_line),
+            self.pd_req.valid.eq(hit_valid),
+            self.pd_req.vaddr.eq(Mux(hit_valid, vaddr, 0)),
+            self.pd_req.ftq_idx.eq(Mux(hit_valid, ftq_idx, 0)),
+        ]
+
+        # Output hit data
+        m.d.sync += [
+            self.result.valid.eq(hit_valid),
+            self.result.vaddr.eq(Mux(hit_valid, vaddr, 0)),
+            self.result.ftq_idx.eq(Mux(hit_valid, ftq_idx, 0)),
+            self.result.data.eq(tag_line),
+        ]
+
+        # FTQ response
         m.d.sync += [
             self.resp.sts.eq(sts),
             self.resp.vaddr.eq(vaddr),
             self.resp.valid.eq(self.stage[1].valid),
-            self.resp.data.eq(tag_line),
             self.resp.ftq_idx.eq(ftq_idx),
         ]
 

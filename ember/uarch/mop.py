@@ -8,6 +8,21 @@ from ember.riscv.inst import *
 from ember.riscv.encoding import *
 
 class DestOperand(Flag):
+    """ Destination operand types
+
+    Values
+    ======
+    NONE: 
+        No destination operand
+    RD:
+        Writes to a general-purpose register
+    MEM:
+        Writes to memory
+    CSR:
+        Writes to a control/status register
+    PC:
+        Writes to the program counter
+    """
     NONE = 0b0000
     RD   = 0b0001
     MEM  = 0b0010
@@ -15,6 +30,21 @@ class DestOperand(Flag):
     PC   = 0b1000
 
 class SourceOperand(Enum):
+    """ Source operand types
+
+    Values
+    ======
+    ZERO:
+        A value of 'zero'
+    RS1:
+        Source register 1
+    RS2:
+        Source register 2
+    IMM:
+        Immediate value
+    PC:
+        Program counter
+    """
     ZERO = 0b0000
     RS1  = 0b0001
     RS2  = 0b0010
@@ -22,6 +52,33 @@ class SourceOperand(Enum):
     PC   = 0b1000
 
 class AluOp(Enum):
+    """ ALU operations
+
+    Values
+    ======
+    NONE:
+        No ALU operation
+    ADD:
+        Addition
+    SUB:
+        Subtraction
+    AND:
+        Logical AND
+    OR:
+        Logical OR
+    XOR:
+        Logical XOR
+    SLT:
+        Signed comparison (less-than)
+    SLTU:
+        Unsigned comparison (less-than)
+    SLL:
+        Shift left (logical)
+    SRL:
+        Shift right (logical)
+    SRA:
+        Shift right (arithmetic)
+    """
     NONE = 0b0000
     ADD  = 0b0001
     SUB  = 0b0010
@@ -35,6 +92,25 @@ class AluOp(Enum):
     SRA  = 0b1011
 
 class BrnOp(Enum):
+    """ Branch operations
+
+    Values
+    ======
+    NONE:
+        No branch operation
+    EQ: 
+        Branch if equal
+    NE: 
+        Branch if not equal
+    LT: 
+        Branch if less-than (signed)
+    GE: 
+        Branch if greater-than (signed)
+    LTU:
+        Branch if less-than (unsigned)
+    GEU:
+        Branch if greater-than (unsigned)
+    """
     NONE = 0b000
     EQ   = 0b001
     NE   = 0b010
@@ -44,6 +120,23 @@ class BrnOp(Enum):
     GEU  = 0b110
 
 class LoadOp(Enum):
+    """ Load operation
+
+    Values
+    ======
+    NONE:
+        No load operation
+    B:
+        Load byte (8-bit), zero-extended to 32-bit
+    H:
+        Load half-word (16-bit), zero-extended to 32-bit
+    W:
+        Load word (32-bit)
+    BU:
+        Load byte (8-bit), sign-extended to 32-bit
+    HU:
+        Load half-word (16-bit), sign-extended to 32-bit
+    """
     NONE = 0
     B    = 1 
     H    = 2 
@@ -52,6 +145,19 @@ class LoadOp(Enum):
     HU   = 5 
 
 class StoreOp(Enum):
+    """ Store operation
+
+    Values
+    ======
+    NONE:
+        No store operation
+    B:
+        Store byte (8-bit)
+    H:
+        Store half-word (16-bit)
+    W:
+        Store word (32-bit)
+    """
     NONE = 0
     B = 1
     H = 2
@@ -81,8 +187,34 @@ class ControlFlowOp(Enum):
     RET      = 6
 
 class EmberMop(object):
+    """ Control signals associated with a macro-op. 
+
+    Members
+    =======
+    fmt: 
+        RISC-V encoding format
+    dst:
+        Destination operand type[s]
+    src1:
+        First source operand type
+    src2:
+        Second source operand type
+    alu_op:
+        ALU operation
+    brn_op:
+        Branch operation
+    jmp_op:
+        Jump operation
+    sys_op:
+        System operation
+    ld_op:
+        Load operation
+    st_op:
+        Store operation
+    """
     layout = StructLayout({
         "fmt": RvFormat,
+        "dst": DestOperand,
         "src1": SourceOperand,
         "src2": SourceOperand,
         "alu_op": AluOp,
@@ -91,10 +223,8 @@ class EmberMop(object):
         "sys_op": SysOp,
         "ld_op": LoadOp,
         "st_op": StoreOp,
-        "alloc": unsigned(1),
     })
     def __init__(self, fmt: RvFormat, 
-                 alloc: int = 0,
                  dst: DestOperand = DestOperand.NONE,
                  src1: SourceOperand = SourceOperand.ZERO,
                  src2: SourceOperand = SourceOperand.ZERO,
@@ -106,8 +236,8 @@ class EmberMop(object):
                  st_op: StoreOp = StoreOp.NONE,
                  ):
         self.values = {
-            "alloc": alloc,
             "fmt": fmt,
+            "dst": dst.value,
             "src1": src1.value,
             "src2": src2.value,
             "alu_op": alu_op.value,
@@ -133,49 +263,48 @@ class EmberMopGroup(object):
 
 
 DEFAULT_EMBER_MOPS = EmberMopGroup(members={
-    "AUIPC":  EmberMop(RvFormat.U, alloc=1, alu_op=AluOp.ADD,
-                      dst=DestOperand.RD, src1=SourceOperand.PC, src2=SourceOperand.IMM),
-    "LUI":    EmberMop(RvFormat.U, alloc=1, alu_op=AluOp.ADD, dst=DestOperand.RD),
+    "AUIPC":  EmberMop(RvFormat.U, alu_op=AluOp.ADD,  src1=SourceOperand.PC,  src2=SourceOperand.IMM,  dst=DestOperand.RD,),
+    "LUI":    EmberMop(RvFormat.U, alu_op=AluOp.ADD,  src1=SourceOperand.IMM, src2=SourceOperand.ZERO, dst=DestOperand.RD,),
+    "JAL":    EmberMop(RvFormat.J, jmp_op=JmpOp.JAL,  src1=SourceOperand.PC,  src2=SourceOperand.IMM,  dst=(DestOperand.RD|DestOperand.PC)),
+    "JALR":   EmberMop(RvFormat.I, jmp_op=JmpOp.JALR, src1=SourceOperand.RS1, src2=SourceOperand.IMM,  dst=(DestOperand.RD|DestOperand.PC)),
 
-    "JAL":    EmberMop(RvFormat.J, jmp_op=JmpOp.JAL, dst=DestOperand.PC),
-    "JALR":   EmberMop(RvFormat.I, alloc=1, jmp_op=JmpOp.JALR, dst=DestOperand.RD|DestOperand.PC),
-    "BEQ":    EmberMop(RvFormat.B, brn_op=BrnOp.EQ, dst=DestOperand.PC,),
-    "BNE":    EmberMop(RvFormat.B, brn_op=BrnOp.NE, dst=DestOperand.PC,),
-    "BLT":    EmberMop(RvFormat.B, brn_op=BrnOp.LT, dst=DestOperand.PC,),
-    "BGE":    EmberMop(RvFormat.B, brn_op=BrnOp.GE, dst=DestOperand.PC,),
-    "BLTU":   EmberMop(RvFormat.B, brn_op=BrnOp.LTU, dst=DestOperand.PC,),
-    "BGEU":   EmberMop(RvFormat.B, brn_op=BrnOp.GEU, dst=DestOperand.PC,),
+    "BEQ":    EmberMop(RvFormat.B, brn_op=BrnOp.EQ,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.PC,),
+    "BNE":    EmberMop(RvFormat.B, brn_op=BrnOp.NE,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.PC,),
+    "BLT":    EmberMop(RvFormat.B, brn_op=BrnOp.LT,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.PC,),
+    "BGE":    EmberMop(RvFormat.B, brn_op=BrnOp.GE,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.PC,),
+    "BLTU":   EmberMop(RvFormat.B, brn_op=BrnOp.LTU, src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.PC,),
+    "BGEU":   EmberMop(RvFormat.B, brn_op=BrnOp.GEU, src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.PC,),
 
-    "LB":     EmberMop(RvFormat.I, alloc=1, ld_op=LoadOp.B, dst=DestOperand.RD,),
-    "LH":     EmberMop(RvFormat.I, alloc=1, ld_op=LoadOp.H, dst=DestOperand.RD,),
-    "LW":     EmberMop(RvFormat.I, alloc=1, ld_op=LoadOp.W, dst=DestOperand.RD,),
-    "LBU":    EmberMop(RvFormat.I, alloc=1, ld_op=LoadOp.BU, dst=DestOperand.RD,),
-    "LHU":    EmberMop(RvFormat.I, alloc=1, ld_op=LoadOp.HU, dst=DestOperand.RD,),
+    "LB":     EmberMop(RvFormat.I, ld_op=LoadOp.B,  src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "LH":     EmberMop(RvFormat.I, ld_op=LoadOp.H,  src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "LW":     EmberMop(RvFormat.I, ld_op=LoadOp.W,  src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "LBU":    EmberMop(RvFormat.I, ld_op=LoadOp.BU, src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "LHU":    EmberMop(RvFormat.I, ld_op=LoadOp.HU, src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
 
-    "SB":     EmberMop(RvFormat.S, st_op=StoreOp.B, dst=DestOperand.MEM,),
-    "SH":     EmberMop(RvFormat.S, st_op=StoreOp.H, dst=DestOperand.MEM,),
-    "SW":     EmberMop(RvFormat.S, st_op=StoreOp.W, dst=DestOperand.MEM,),
+    "SB":     EmberMop(RvFormat.S, st_op=StoreOp.B, src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.MEM,),
+    "SH":     EmberMop(RvFormat.S, st_op=StoreOp.H, src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.MEM,),
+    "SW":     EmberMop(RvFormat.S, st_op=StoreOp.W, src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.MEM,),
 
-    "ADDI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.ADD, dst=DestOperand.RD,),
-    "SLTI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.SLT, dst=DestOperand.RD,),
-    "SLTIU":  EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.SLTU, dst=DestOperand.RD,),
-    "XORI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.XOR, dst=DestOperand.RD,),
-    "ORI":    EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.OR, dst=DestOperand.RD,),
-    "ANDI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.AND, dst=DestOperand.RD,),
-    "SLLI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.SLL, dst=DestOperand.RD,),
-    "SRLI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.SRL, dst=DestOperand.RD,),
-    "SRAI":   EmberMop(RvFormat.I, alloc=1, alu_op=AluOp.SRA, dst=DestOperand.RD,),
+    "ADDI":   EmberMop(RvFormat.I, alu_op=AluOp.ADD,  src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "SLTI":   EmberMop(RvFormat.I, alu_op=AluOp.SLT,  src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "SLTIU":  EmberMop(RvFormat.I, alu_op=AluOp.SLTU, src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "XORI":   EmberMop(RvFormat.I, alu_op=AluOp.XOR,  src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "ORI":    EmberMop(RvFormat.I, alu_op=AluOp.OR,   src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "ANDI":   EmberMop(RvFormat.I, alu_op=AluOp.AND,  src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "SLLI":   EmberMop(RvFormat.I, alu_op=AluOp.SLL,  src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "SRLI":   EmberMop(RvFormat.I, alu_op=AluOp.SRL,  src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
+    "SRAI":   EmberMop(RvFormat.I, alu_op=AluOp.SRA,  src1=SourceOperand.RS1, src2=SourceOperand.IMM, dst=DestOperand.RD,),
 
-    "ADD":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.ADD, dst=DestOperand.RD,),
-    "SUB":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SUB, dst=DestOperand.RD,),
-    "SLL":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SLL, dst=DestOperand.RD,),
-    "SLT":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SLT, dst=DestOperand.RD,),
-    "SLTU":   EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SLTU, dst=DestOperand.RD,),
-    "XOR":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.XOR, dst=DestOperand.RD,),
-    "SRL":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SRL, dst=DestOperand.RD,),
-    "SRA":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.SRA, dst=DestOperand.RD,),
-    "OR":     EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.OR, dst=DestOperand.RD,),
-    "AND":    EmberMop(RvFormat.R, alloc=1, alu_op=AluOp.AND, dst=DestOperand.RD,),
+    "ADD":    EmberMop(RvFormat.R, alu_op=AluOp.ADD,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.RD,),
+    "SUB":    EmberMop(RvFormat.R, alu_op=AluOp.SUB,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.RD,),
+    "SLL":    EmberMop(RvFormat.R, alu_op=AluOp.SLL,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.RD,),
+    "SLT":    EmberMop(RvFormat.R, alu_op=AluOp.SLT,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.RD,),
+    "SLTU":   EmberMop(RvFormat.R, alu_op=AluOp.SLTU, src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.RD,),
+    "XOR":    EmberMop(RvFormat.R, alu_op=AluOp.XOR,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.RD,),
+    "SRL":    EmberMop(RvFormat.R, alu_op=AluOp.SRL,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.RD,),
+    "SRA":    EmberMop(RvFormat.R, alu_op=AluOp.SRA,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.RD,),
+    "OR":     EmberMop(RvFormat.R, alu_op=AluOp.OR,   src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.RD,),
+    "AND":    EmberMop(RvFormat.R, alu_op=AluOp.AND,  src1=SourceOperand.RS1, src2=SourceOperand.RS2, dst=DestOperand.RD,),
 
     "FENCE":  EmberMop(RvFormat.I, sys_op=SysOp.FENCE),
     "ECALL":  EmberMop(RvFormat.I, sys_op=SysOp.ECALL),

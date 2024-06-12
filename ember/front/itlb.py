@@ -73,9 +73,10 @@ class L1ICacheTLB(Component):
     =====
     fill_req: :class:`L1ICacheTLBFillRequest`
         Fill request
-
     rp: :class:`L1ICacheTLBReadPort`
         Read port
+    pp: :class:`L1ICacheTLBReadPort`
+        Probe read port
 
     """
 
@@ -83,22 +84,24 @@ class L1ICacheTLB(Component):
         self.p = param
         self.depth = self.p.tlb.num_entries
 
-        self.lfsr = LFSR(degree=ceil_log2(self.depth))
+        #self.lfsr = LFSR(degree=ceil_log2(self.depth))
 
         signature = Signature({
             "fill_req": In(L1ICacheTLBFillRequest(param)),
             "rp": In(L1ICacheTLBReadPort(param)),
+            "pp": In(L1ICacheTLBReadPort(param)),
         })
         super().__init__(signature)
 
     def elaborate(self, platform):
         m = Module()
 
-        # Match signals
-        match_arr = Array(
-            Signal(name=f"match_arr{i}") 
-            for i in range(self.depth)
-        )
+        # Generates a "random" index for allocations/evictions.
+        # FIXME: The tree-based PLRU is probably a more reasonable strategy.
+        lfsr_en = self.fill_req.valid
+        m.submodules.lfsr = lfsr = \
+            EnableInserter(lfsr_en)(LFSR(degree=ceil_log2(self.depth)))
+        lfsr_out = lfsr.value
 
         # Tag and data arrays.
         # FIXME: These are going be turned into a lot of flipflops..
@@ -112,54 +115,77 @@ class L1ICacheTLB(Component):
         )
         valid_arr = Array(Signal() for i in range(self.depth))
 
-        # Generates a "random" index for allocations/evictions.
-        # FIXME: The tree-based PLRU is probably a more reasonable strategy.
-        lfsr_en = Signal()
-        lfsr_out = Signal(ceil_log2(self.depth))
-        m.submodules.lfsr = lfsr = EnableInserter(lfsr_en)(self.lfsr)
-        m.d.comb += [ 
-            lfsr_out.eq(self.lfsr.value), 
-        ]
+        # Match signals
+        match_arr_rp = Array(
+            Signal(name=f"match_arr_rp_{i}") for i in range(self.depth)
+        )
+        match_arr_pp = Array(
+            Signal(name=f"match_arr_pp_{i}") for i in range(self.depth)
+        )
 
-        # This encoder converts the match signals (one-hot) into an index
-        # into the data array. 
-        m.submodules.match_encoder = match_encoder = PriorityEncoder(self.depth)
-        match_hit  = (~match_encoder.n & self.rp.req.valid)
-        match_idx  = match_encoder.o
-        match_data = Mux(match_hit, data_arr[match_idx], 0)
+        # Convert match signals (one-hot) into an index into the data array. 
+        m.submodules.enc_rp = enc_rp = PriorityEncoder(self.depth)
+        m.submodules.enc_pp = enc_pp = PriorityEncoder(self.depth)
+        match_hit_rp  = (~enc_rp.n & self.rp.req.valid)
+        match_hit_pp  = (~enc_pp.n & self.pp.req.valid)
+        match_idx_rp  = enc_rp.o
+        match_idx_pp  = enc_pp.o
+        match_data_rp = Mux(match_hit_rp, data_arr[match_idx_rp], 0)
+        match_data_pp = Mux(match_hit_pp, data_arr[match_idx_pp], 0)
 
         # Default assignment for the response
         m.d.sync += [
             self.rp.resp.valid.eq(self.rp.req.valid),
             self.rp.resp.hit.eq(0),
             self.rp.resp.pte.eq(0),
+
+            self.pp.resp.valid.eq(self.pp.req.valid),
+            self.pp.resp.hit.eq(0),
+            self.pp.resp.pte.eq(0),
         ]
 
         with m.If(self.rp.req.valid):
             # Drive input to all of the comparators
             m.d.comb += [
-                match_arr[idx].eq(
+                match_arr_rp[idx].eq(
                     (tag_arr[idx] == self.rp.req.vpn) & valid_arr[idx]
                 )
                 for idx in range(self.depth)
             ]
             # Obtain the index of the matching entry (if one exists). 
             m.d.comb += [
-                match_encoder.i.eq(Cat(*match_arr))
+                enc_rp.i.eq(Cat(*match_arr_rp))
             ]
             # Data for the matching entry is available on the next cycle.
             m.d.sync += [
-                self.rp.resp.hit.eq(match_hit),
-                self.rp.resp.pte.eq(match_data),
+                self.rp.resp.hit.eq(match_hit_rp),
+                self.rp.resp.pte.eq(match_data_rp),
             ]
 
-        fill_idx = lfsr_out
-        m.d.comb += lfsr_en.eq(self.fill_req.valid)
+        with m.If(self.pp.req.valid):
+            # Drive input to all of the comparators
+            m.d.comb += [
+                match_arr_pp[idx].eq(
+                    (tag_arr[idx] == self.pp.req.vpn) & valid_arr[idx]
+                )
+                for idx in range(self.depth)
+            ]
+            # Obtain the index of the matching entry (if one exists). 
+            m.d.comb += [
+                enc_pp.i.eq(Cat(*match_arr_pp))
+            ]
+            # Data for the matching entry is available on the next cycle.
+            m.d.sync += [
+                self.pp.resp.hit.eq(match_hit_pp),
+                self.pp.resp.pte.eq(match_data_pp),
+            ]
+
+
         with m.If(self.fill_req.valid):
             m.d.sync += [
-                tag_arr[fill_idx].eq(self.fill_req.vpn),
-                data_arr[fill_idx].eq(self.fill_req.pte),
-                valid_arr[fill_idx].eq(1),
+                tag_arr[lfsr_out].eq(self.fill_req.vpn),
+                data_arr[lfsr_out].eq(self.fill_req.pte),
+                valid_arr[lfsr_out].eq(1),
             ]
 
         return m

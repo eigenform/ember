@@ -40,6 +40,16 @@ class CacheLine(ArrayLayout):
 
 class L1IAddressLayout(FlexibleLayout):
     """ Address bits used for interacting with the L1I cache. 
+
+    Fields
+    ======
+    off:
+        Offset of a byte within a cacheline
+    set:
+        The L1I cache set index for a cacheline
+    line:
+        The index of a cacheline within a physical page
+
     """
     def __init__(self, cache_line_sz: int, cache_sets: int):
         self.num_offset_bits = exact_log2(cache_line_sz)
@@ -64,13 +74,45 @@ class L1IAddressLayout(FlexibleLayout):
 
 
 class VirtualAddress(FlexibleLayout):
-    """ Layout of a 32-bit virtual address. """
+    """ Layout of a 32-bit virtual address. 
+
+    Fields
+    ======
+    bits:
+        Flat unsigned integer layout.
+    sv32:
+        Layout associated with the Sv32 virtual memory scheme.
+    l1i:
+        Layout used to access the L1I cache
+    """
     def __init__(self, l1i_line_bytes: int, l1i_num_sets: int):
+        self.num_off_bits = exact_log2(l1i_line_bytes)
+        self.num_blk_bits = 32 - self.num_off_bits
         super().__init__(32, {
             "bits":    Field(unsigned(32), 0),
             "sv32":    Field(VirtualAddressSv32(), 0),
             "l1i":     Field(L1IAddressLayout(l1i_line_bytes, l1i_num_sets), 0),
+
+            "fetch_off": Field(unsigned(self.num_off_bits), 0),
+            "fetch_blk": Field(unsigned(self.num_blk_bits), self.num_off_bits),
         })
+
+    def __call__(self, value):
+        return VirtualAddressView(self, value)
+
+class VirtualAddressView(View):
+    """ View associated with a virtual address. """
+    def __init__(self, layout, target):
+        assert isinstance(layout, VirtualAddress)
+        self.num_off_bits = layout.num_off_bits
+        self.num_blk_bits = layout.num_blk_bits
+        super().__init__(layout, target)
+
+    def get_fetch_addr(self):
+        """ Return a full 32-bit address with the offset bits set to zero """
+        res = Cat(C(0, self.num_off_bits), self.fetch_blk)
+        assert len(res) == 32
+        return res
 
 class PhysicalAddress(FlexibleLayout):
     """ Layout of a 34-bit physical address. """

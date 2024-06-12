@@ -105,7 +105,8 @@ class L1ICache(Component):
     Write ports are used to replace the tag and data for a particular set and
     a particular way. 
 
-    For now, there is only one read port and one write port. 
+    Probe ports are read ports [dedicated to prefetch logic] that yield tags 
+    for a particular set across all ways.
 
     Ports 
     =====
@@ -120,6 +121,9 @@ class L1ICache(Component):
 
     def __init__(self, param: EmberParams):
         self.p = param
+        self.num_rp = param.l1i.num_rp
+        self.num_wp = param.l1i.num_wp
+        self.num_pp = param.l1i.num_pp
         signature = Signature({
             "rp": In(L1ICacheReadPort(param)).array(param.l1i.num_rp),
             "wp": In(L1ICacheWritePort(param)).array(param.l1i.num_wp),
@@ -133,60 +137,64 @@ class L1ICache(Component):
         data_arr = m.submodules.data_arr = L1ICacheDataArray(self.p)
         tag_arr  = m.submodules.tag_arr  = L1ICacheTagArray(self.p)
 
-        # Read port outputs will be valid on the next cycle
-        r_rp_output_valid = Signal()
-        r_wp_resp_valid = Signal()
-        r_pp_resp_valid = Signal()
-        m.d.sync += [ 
-            r_rp_output_valid.eq(self.rp[0].req.valid),
-            r_wp_resp_valid.eq(self.wp[0].req.valid),
-            r_pp_resp_valid.eq(self.pp[0].req.valid),
-        ]
+        # Outputs for the current request are valid on the next cycle
+        for idx in range(self.num_rp):
+            m.d.sync += self.rp[idx].resp.valid.eq(self.rp[idx].req.valid)
+        for idx in range(self.num_wp):
+            m.d.sync += self.wp[idx].resp.valid.eq(self.wp[idx].req.valid)
+        for idx in range(self.num_pp):
+            m.d.sync += self.pp[idx].resp.valid.eq(self.pp[idx].req.valid)
 
         # Read port inputs
-        m.d.comb += [
-            data_arr.rp.req.valid.eq(self.rp[0].req.valid),
-            data_arr.rp.req.set.eq(self.rp[0].req.set),
+        for idx in range(self.num_rp):
+            m.d.comb += [
+                data_arr.rp[idx].req.valid.eq(self.rp[idx].req.valid),
+                data_arr.rp[idx].req.set.eq(self.rp[idx].req.set),
+                tag_arr.rp[idx].req.valid.eq(self.rp[idx].req.valid),
+                tag_arr.rp[idx].req.set.eq(self.rp[idx].req.set),
+            ]
 
-            tag_arr.rp.req.valid.eq(self.rp[0].req.valid),
-            tag_arr.rp.req.set.eq(self.rp[0].req.set),
-
-            tag_arr.pp.req.valid.eq(self.pp[0].req.valid),
-            tag_arr.pp.req.set.eq(self.pp[0].req.set),
-        ]
+        # Probe port inputs
+        for idx in range(self.num_pp):
+            m.d.comb += [
+                tag_arr.pp[idx].req.valid.eq(self.pp[idx].req.valid),
+                tag_arr.pp[idx].req.set.eq(self.pp[idx].req.set),
+            ]
 
         # Write port inputs
-        m.d.comb += [
-            data_arr.wp.req.valid.eq(self.wp[0].req.valid),
-            data_arr.wp.req.way.eq(self.wp[0].req.way),
-            data_arr.wp.req.idx.eq(self.wp[0].req.set),
-            data_arr.wp.req.data.eq(self.wp[0].req.line_data),
-
-            tag_arr.wp.req.valid.eq(self.wp[0].req.valid),
-            tag_arr.wp.req.way.eq(self.wp[0].req.way),
-            tag_arr.wp.req.idx.eq(self.wp[0].req.set),
-            tag_arr.wp.req.data.eq(self.wp[0].req.tag_data),
-        ]
-
-        # Valid signals
-        m.d.comb += [ 
-            self.rp[0].resp.valid.eq(r_rp_output_valid),
-            self.wp[0].resp.valid.eq(r_wp_resp_valid),
-            self.pp[0].resp.valid.eq(r_pp_resp_valid),
-        ]
-
-        for way_idx in range(self.p.l1i.num_ways):
+        for idx in range(self.num_wp):
             m.d.comb += [
-                self.rp[0].resp.tag_data[way_idx].eq(
-                    tag_arr.rp.resp.data[way_idx]
-                ),
-                self.rp[0].resp.line_data[way_idx].eq(
-                    data_arr.rp.resp.data[way_idx]
-                ),
-                self.pp[0].resp.tag_data[way_idx].eq(
-                    tag_arr.pp.resp.data[way_idx]
-                ),
+                data_arr.wp[idx].req.valid.eq(self.wp[idx].req.valid),
+                data_arr.wp[idx].req.way.eq(self.wp[idx].req.way),
+                data_arr.wp[idx].req.idx.eq(self.wp[idx].req.set),
+                data_arr.wp[idx].req.data.eq(self.wp[idx].req.line_data),
+
+                tag_arr.wp[idx].req.valid.eq(self.wp[idx].req.valid),
+                tag_arr.wp[idx].req.way.eq(self.wp[idx].req.way),
+                tag_arr.wp[idx].req.idx.eq(self.wp[idx].req.set),
+                tag_arr.wp[idx].req.data.eq(self.wp[idx].req.tag_data),
             ]
+
+        # Read port outputs
+        for idx in range(self.num_rp):
+            for way_idx in range(self.p.l1i.num_ways):
+                m.d.comb += [
+                    self.rp[idx].resp.tag_data[way_idx].eq(
+                        tag_arr.rp[idx].resp.data[way_idx]
+                    ),
+                    self.rp[idx].resp.line_data[way_idx].eq(
+                        data_arr.rp[idx].resp.data[way_idx]
+                    ),
+                ]
+
+        # Probe port outputs
+        for idx in range(self.num_pp):
+            for way_idx in range(self.p.l1i.num_ways):
+                m.d.comb += [
+                    self.pp[idx].resp.tag_data[way_idx].eq(
+                        tag_arr.pp[idx].resp.data[way_idx]
+                    ),
+                ]
 
         return m   
 

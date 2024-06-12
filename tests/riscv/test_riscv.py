@@ -22,19 +22,29 @@ def add_layout_case(m: Module, bits, fmt, opcode,
             case RvFormat.R: 
                 pass
             case RvFormat.I: 
-                i = View(StructLayout({"value": signed(12)}), imm_view.get_i_imm12())
+                raw = imm_view.get_i_imm12()
+                assert raw.shape() == unsigned(12)
+                i = View(StructLayout({"value": signed(12)}), raw)
                 m.d.comb += Assert(i.value == imm)
             case RvFormat.S: 
-                i = View(StructLayout({"value": signed(12)}), imm_view.get_s_imm12())
+                raw = imm_view.get_s_imm12()
+                assert raw.shape() == unsigned(12)
+                i = View(StructLayout({"value": signed(12)}), raw)
                 m.d.comb += Assert(i.value == imm)
             case RvFormat.B: 
-                i = View(StructLayout({"value": signed(13)}), imm_view.get_b_imm12())
+                raw = imm_view.get_b_imm12()
+                assert raw.shape() == unsigned(12)
+                i = View(StructLayout({"value": signed(13)}), Cat(C(0,1),raw))
                 m.d.comb += Assert(i.value == imm)
             case RvFormat.U: 
-                i = View(StructLayout({"value": unsigned(20)}), imm_view.get_u_imm20())
+                raw = imm_view.get_u_imm20()
+                assert raw.shape() == unsigned(20)
+                i = View(StructLayout({"value": unsigned(20)}), raw)
                 m.d.comb += Assert(i.value == imm)
             case RvFormat.J: 
-                i = View(StructLayout({"value": signed(21)}), imm_view.get_j_imm20())
+                raw = imm_view.get_j_imm20()
+                assert raw.shape() == unsigned(20)
+                i = View(StructLayout({"value": signed(21)}), Cat(C(0,1), raw))
                 m.d.comb += Assert(i.value == imm)
 
     m.d.comb += Assert(view.opcode_low == 0b11, f"{bits:08x}")

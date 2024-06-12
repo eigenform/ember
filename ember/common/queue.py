@@ -7,6 +7,236 @@ import amaranth.lib.memory as memory
 from amaranth.utils import ceil_log2, exact_log2
 from ember.common import *
 
+class CreditInterface(Signature):
+    """ Interface used to exchange credit. 
+
+    Members
+    =======
+    valid:
+        This message is valid
+    credit:
+        The number of credits.
+
+    """
+    def __init__(self, width: int):
+        super().__init__({
+            "valid": Out(1),
+            "credit": Out(ceil_log2(width+1)),
+        })
+
+class CreditBus(Signature):
+    """ Bi-directional interface for exchanging credit. 
+
+    Members
+    =======
+    req:
+        Credit request
+    avail:
+        Credit availability
+
+    """
+    def __init__(self, width: int):
+        super().__init__({
+            "req":   Out(CreditInterface(width)),
+            "avail": In(CreditInterface(width)),
+        })
+
+class CreditQueueUpstream(Signature):
+    """ Upstream (producer-facing) interface to a :class:`CreditQueue`.
+
+    Members
+    =======
+    credit:
+        Credit information.
+    data:
+        Requested data being enqueued.
+
+    """
+
+    def __init__(self, width: int, data_layout: Layout):
+        super().__init__({
+            "credit": Out(CreditBus(width)),
+            "data": Out(data_layout).array(width),
+        })
+
+class CreditQueueDownstream(Signature):
+    """ Downstream (consumer-facing) interface to a :class:`CreditQueue`.
+
+    Members
+    =======
+    credit:
+        Credit bus. 
+    data:
+        Data available to be dequeued. 
+
+    """
+    def __init__(self, width: int, data_layout: Layout):
+        super().__init__({
+            "credit": Out(CreditBus(width)),
+            "data": In(data_layout).array(width),
+        })
+
+
+
+class CreditQueue(Component):
+    """ A FIFO queue with signalling for downstream and upstream availability. 
+
+    .. warning: 
+        Again: this is probably unphysical for various reasons? 
+        Single-cycle write-to-read latency probably depends on the consumer 
+        being able to drive the read credit signals very early in a cycle? 
+
+        
+    """
+    def __init__(self, depth: int, width: int, data_layout: Layout):
+        self.depth = depth
+        self.width = width
+        self.data_layout = data_layout
+        super().__init__(Signature({
+            "up": In(CreditQueueUpstream(width, data_layout)),
+            "down": Out(CreditQueueDownstream(width, data_layout)),
+        }))
+
+    def elaborate(self, platform):
+        m = Module()
+
+        # Backing memory
+        mem = m.submodules.mem = memory.Memory(
+            shape=self.data_layout,
+            depth=self.depth,
+            init=[],
+        )
+
+        # Instantiate read and write ports
+        rp = []
+        wp = []
+        for idx in range(self.width):
+            _wp = mem.write_port()
+            _rp = mem.read_port(domain='comb')
+            wp.append(_wp)
+            rp.append(_rp)
+
+        # The number of occupied queue entries
+        r_used = Signal(ceil_log2(self.depth+1), init=0)
+
+        # Current number of read credits being sent downstream
+        r_rcredit = Signal(ceil_log2(self.width+1), init=0)
+        # Current number of write credits being sent upstream
+        r_wcredit = Signal(ceil_log2(self.width+1), init=self.width)
+
+        # Pointer to the oldest entry in the queue
+        r_rptr  = Signal(exact_log2(self.depth), init=0)
+        # Pointer to the newest entry in the queue
+        r_wptr  = Signal(exact_log2(self.depth), init=0)
+
+        # Window of pointers to entries that will be sent downstream
+        rptr_arr = Array(Signal(exact_log2(self.depth)) for _ in range(self.width))
+        # Window of pointers to entries that will be filled from upstream
+        wptr_arr = Array(Signal(exact_log2(self.depth)) for _ in range(self.width))
+
+        # Window mask determined by the number of read credits
+        rptr_arr_en = Array(Signal() for _ in range(self.width))
+        # Window mask determined by the number of write credits
+        wptr_arr_en = Array(Signal() for _ in range(self.width))
+
+        # The number of occupied entries on the next cycle
+        next_used = Signal(ceil_log2(self.depth+1))
+        # The number of free entries on the next cycle
+        next_free = Signal(ceil_log2(self.depth+1))
+
+        # The read pointer on the next cycle
+        next_rptr = Signal(exact_log2(self.depth))
+        # The write pointer on the next cycle
+        next_wptr = Signal(exact_log2(self.depth))
+
+        # The number of read credits on the next cycle
+        next_rcredit = Signal(ceil_log2(self.width+1))
+        # The number of write credits on the next cycle
+        next_wcredit = Signal(ceil_log2(self.width+1))
+
+        # The current read request would result in underflow
+        rd_underflow = (self.down.credit.req.credit > r_rcredit)
+        # The current write request would result in overflow
+        wr_overflow  = (self.up.credit.req.credit > r_wcredit)
+
+        # The read pointer will change on the next cycle
+        rd_nz = (self.down.credit.req.credit != 0)
+        rd_ok = (self.down.credit.req.valid & rd_nz & ~rd_underflow)
+
+        # The write pointer will change on the next cycle
+        wr_nz = (self.up.credit.req.credit != 0)
+        wr_ok = (self.up.credit.req.valid & wr_nz & ~wr_overflow)
+
+        # The number of entries allocated this cycle
+        num_alloc = Mux(wr_ok, self.up.credit.req.credit, 0)
+        # The number of entries freed this cycle
+        num_freed = Mux(rd_ok, self.down.credit.req.credit, 0)
+
+        # Pointers to entries that will be available to read next cycle
+        m.d.comb += [ rptr_arr[idx].eq(r_rptr + idx) for idx in range(self.width) ]
+        m.d.comb += [ rptr_arr_en[idx].eq(idx < r_rcredit) for idx in range(self.width) ]
+
+        # Pointers to entries that will be written this cycle
+        m.d.comb += [ wptr_arr[idx].eq(r_wptr + idx) for idx in range(self.width) ]
+        m.d.comb += [ wptr_arr_en[idx].eq(idx < r_wcredit) for idx in range(self.width) ]
+
+        # Drive outputs
+        m.d.comb += [
+            self.down.credit.avail.credit.eq(r_rcredit),
+            self.up.credit.avail.credit.eq(r_wcredit),
+        ]
+
+        # Compute pointers/credits for the next cycle
+        m.d.comb += [
+            next_used.eq(r_used + num_alloc - num_freed),
+            next_free.eq(self.depth - next_used),
+            next_wcredit.eq(Mux(next_free > self.width, self.width, next_free)),
+            next_rcredit.eq(Mux(next_used > self.width, self.width, next_used)),
+            next_rptr.eq(r_rptr + self.down.credit.req.credit),
+            next_wptr.eq(r_wptr + self.up.credit.req.credit),
+        ]
+        m.d.sync += [
+            r_wcredit.eq(next_wcredit),
+            r_rcredit.eq(next_rcredit),
+            r_used.eq(next_used),
+        ]
+
+        # Drive inputs to the backing memory device
+        for idx in range(self.width):
+            m.d.comb += [
+                rp[idx].addr.eq(rptr_arr[idx]),
+                wp[idx].en.eq(wptr_arr_en[idx]),
+                wp[idx].addr.eq(wptr_arr[idx]),
+                wp[idx].data.eq(self.up.data[idx]),
+            ]
+
+        # Select which data is available on the next cycle.
+        next_rd_data = Array(Signal(self.data_layout) for _ in range(self.width))
+        with m.If((next_rptr == r_wptr) & wr_ok):
+            m.d.comb += [ 
+                next_rd_data[idx].eq(Mux(wptr_arr_en[idx], self.up.data[idx], 0))
+                for idx in range(self.width)
+            ]
+        with m.Else():
+            m.d.comb += [ 
+                next_rd_data[idx].eq(Mux(rptr_arr_en[idx], rp[idx].data, 0))
+                for idx in range(self.width)
+            ]
+        m.d.sync += [
+            self.down.data[idx].eq(next_rd_data[idx]) for idx in range(self.width)
+        ]
+
+
+        # When a read is occurring this cycle, increment the read pointer
+        with m.If(rd_ok):
+            m.d.sync += r_rptr.eq(r_rptr + self.down.credit.req.credit)
+        # When a write is occurring this cycle, increment the write pointer
+        with m.If(wr_ok):
+            m.d.sync += r_wptr.eq(r_wptr + self.up.credit.req.credit)
+
+        return m
+
+
 class Queue(Component):
     """ A FIFO queue that supports pushing/popping multiple entries.
 

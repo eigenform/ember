@@ -8,20 +8,21 @@ from amaranth.lib.data import *
 from ember.sim.fakeram import *
 from ember.param import *
 from ember.core import *
+from ember.decode import *
 
-#class EmbrTest(Component):
-#    def __init__(self, param: EmberParams):
-#        self.p = param
-#        signature = Signature({
-#            "ibus": Out(FakeRamInterface(4)),
-#        })
-#        super().__init__(signature)
-#    def elaborate(self, platform): 
-#        m = Module()
-#        m.submodules.fetch = fetch = FetchUnit(self.p)
-#        m.submodules.decode = decode = FetchUnit(self.p)
-#
-#        return m
+class EmbrTest(Component):
+    def __init__(self, param: EmberParams):
+        self.p = param
+        signature = Signature({
+        })
+
+        super().__init__(signature)
+    def elaborate(self, platform): 
+        m = Module()
+
+        decoder = [ Rv32Decoder(self.p) for _ in range(4) ]
+
+        return m
 
 
 #dut = EmberCore(EmberParams())

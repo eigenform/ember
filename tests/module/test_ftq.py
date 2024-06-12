@@ -23,6 +23,16 @@ def tb_ftq_simple(dut: FetchTargetQueue):
     yield Tick()
 
 class FTQTests(unittest.TestCase):
+    def test_ftq_elaborate(self):
+        dut = FetchTargetQueue(EmberParams())
+        with open("/tmp/FetchTargetQueue.v", "w") as f:
+            f.write(verilog.convert(dut, 
+                emit_src=False, 
+                strip_internal_attrs=True, 
+                name="FetchTargetQueue"
+            ))
+
+
     def test_ftq_simple(self):
         tb = Testbench(
             FetchTargetQueue(EmberParams()),

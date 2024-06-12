@@ -9,7 +9,7 @@ from ember.sim.fakeram import *
 class EmberCoreHarness(Component):
     def __init__(self):
         signature = Signature({
-            "fakeram": Out(FakeRamInterface()),
+            "fakeram": Out(FakeRamInterface(width_words=8)),
         })
         super().__init__(signature)
 

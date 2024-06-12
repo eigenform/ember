@@ -2,7 +2,7 @@ Instruction Predecode
 =====================
 
 
-.. automodule:: ember.predecode
+.. automodule:: ember.front.predecode
    :members:
 
 

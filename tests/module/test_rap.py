@@ -3,7 +3,7 @@ from ember.param import *
 from ember.front.l1i import *
 from ember.front.itlb import *
 from ember.sim.common import Testbench
-from ember.bp.rap import *
+from ember.front.bp.rap import *
 
 from amaranth import *
 from amaranth.sim import *

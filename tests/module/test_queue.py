@@ -99,8 +99,6 @@ def tb_queue_wrap(dut: Queue):
         yield from q.drive(data[i], 4, 4)
         yield Tick()
 
-
-
 class QueueUnitTests(unittest.TestCase):
     def test_queue_elab(self):
         dut = Queue(32, 4, unsigned(32))
@@ -130,7 +128,4 @@ class QueueUnitTests(unittest.TestCase):
             "tb_queue_wrap"
         )
         tb.run()
-
-
-
 

@@ -211,16 +211,16 @@ class RvEncoding(FlexibleLayout):
             "u_imm20_12_31": Field(unsigned(20), 12),
 
             # J-type fields
-            "j_imm20_12_19": Field(unsigned(8), 12),
-            "j_imm20_11":    Field(unsigned(1), 20),
+            "j_imm20_12_19": Field(unsigned(8),  12),
+            "j_imm20_11":    Field(unsigned(1),  20),
             "j_imm20_1_10":  Field(unsigned(10), 21),
-            "j_imm20_20":    Field(unsigned(1), 31),
+            "j_imm20_20":    Field(unsigned(1),  31),
 
             # Useful aliases
-            "shamt": Field(unsigned(5), 20),
-            "csr":   Field(unsigned(12),20),
-            "sign":  Field(unsigned(1), 31),
-            "raw":   Field(unsigned(32), 0),
+            "shamt": Field(unsigned(5),  20),
+            "csr":   Field(unsigned(12), 20),
+            "sign":  Field(unsigned(1),  31),
+            "raw":   Field(unsigned(32),  0),
         })
 
 class RvEncodingImmediateView(View):
@@ -237,7 +237,7 @@ class RvEncodingImmediateView(View):
 
     def get_b_imm12(self):
         """ Return the raw 12-bit B-type immediate """
-        return Cat(C(0,1), self.b_imm12_1_4, self.b_imm12_5_10, 
+        return Cat(self.b_imm12_1_4, self.b_imm12_5_10, 
                    self.b_imm12_11, self.b_imm12_12)
 
     def get_u_imm20(self):
@@ -246,7 +246,7 @@ class RvEncodingImmediateView(View):
 
     def get_j_imm20(self):
         """ Return the raw 20-bit J-type immediate """
-        return Cat(C(0,1), self.j_imm20_1_10, self.j_imm20_11,
+        return Cat(self.j_imm20_1_10, self.j_imm20_11,
                    self.j_imm20_12_19, self.j_imm20_20)
 
 

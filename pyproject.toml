@@ -26,14 +26,17 @@ exclude = ["rv32/", "tmp/", "flow/"]
 
 [tool.pdm.dev-dependencies]
 docs = [
-	"sphinx~=7.1",
-	"sphinx-rtd-theme~=2.0",
-	"sphinx-autobuild",
+    "sphinx~=7.1",
+    "sphinx-rtd-theme~=2.0",
+    "sphinx-autobuild",
 ]
 
 [tool.pdm.scripts]
 test.composite = ["test-all"]
 test-all.cmd = "python -m unittest discover -t . -s tests -v"
+test-module.cmd = "python -m unittest discover -t . -s tests/module -v"
+test-pipeline.cmd = "python -m unittest discover -t . -s tests/pipeline -v"
+test-riscv.cmd = "python -m unittest discover -t . -s tests/riscv -v"
 emit-verilog.cmd = "python -c 'print(\"[!] Unimplemented\")'"
 
 docs.cmd = "sphinx-build docs/ docs/build -W --keep-going"

@@ -10,6 +10,11 @@ html_theme_options = {
 }
 html_logo = "_static/embr-rv32-600.png"
 
+#def setup(app):
+#    app.add_css_file("override.css")
+
+numfig = True
+
 with open(".gitignore") as f:
     exclude_patterns = [line.strip() for line in f.readlines()]
 
