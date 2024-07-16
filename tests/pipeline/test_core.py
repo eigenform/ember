@@ -2,7 +2,7 @@ import unittest
 from ember.param import *
 
 from ember.sim.common import Testbench
-from ember.uarch.fetch import *
+from ember.uarch.front import *
 from ember.sim.fakeram import *
 from ember.core import EmberCore
 
@@ -42,14 +42,14 @@ def tb_core_simple(dut: EmberCore):
 
 class EmberCoreTests(unittest.TestCase):
     #def test_fetch_elab(self):
-    #    #m = FetchUnit(EmberParams)
-    #    m = EmberFrontend(EmberParams)
+    #    #m = FetchUnit(EmberParams())
+    #    m = EmberFrontend(EmberParams())
     #    with open("/tmp/EmberFrontend.v", "w") as f:
     #        f.write(verilog.convert(m, emit_src=False, name="EmberFrontend"))
 
     def test_core_simple(self):
         tb = Testbench(
-            EmberCore(EmberParams), 
+            EmberCore(EmberParams()), 
             tb_core_simple,
             "tb_core_simple"
         )

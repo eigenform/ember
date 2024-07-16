@@ -8,6 +8,7 @@ import amaranth.lib.memory as memory
 from amaranth.utils import exact_log2, ceil_log2
 
 from ember.param import *
+from ember.uarch.front import *
 
 class L1IArrayReadPort(Signature):
     class Request(Signature):
@@ -75,8 +76,8 @@ class L1ICacheDataArray(Component):
         self.num_rp = param.l1i.num_rp
         self.num_wp = param.l1i.num_wp
         sig = Signature({
-            "rp": In(L1IArrayReadPort(param, param.l1i.line_layout)).array(self.num_rp),
-            "wp": In(L1IArrayWritePort(param, param.l1i.line_layout)).array(self.num_wp),
+            "rp": In(L1IArrayReadPort(param, L1ICacheline(param))).array(self.num_rp),
+            "wp": In(L1IArrayWritePort(param, L1ICacheline(param))).array(self.num_wp),
         })
         super().__init__(sig)
 
@@ -141,9 +142,9 @@ class L1ICacheTagArray(Component):
         self.num_pp = param.l1i.num_pp
 
         sig = Signature({
-            "rp": In(L1IArrayReadPort(param, param.l1i.tag_layout)).array(self.num_rp),
-            "wp": In(L1IArrayWritePort(param, param.l1i.tag_layout)).array(self.num_wp),
-            "pp": In(L1IArrayReadPort(param, param.l1i.tag_layout)).array(self.num_pp),
+            "rp": In(L1IArrayReadPort(param, L1ITag())).array(self.num_rp),
+            "wp": In(L1IArrayWritePort(param, L1ITag())).array(self.num_wp),
+            "pp": In(L1IArrayReadPort(param, L1ITag())).array(self.num_pp),
         })
         super().__init__(sig)
 
@@ -152,14 +153,14 @@ class L1ICacheTagArray(Component):
 
         for way_idx in range(self.p.l1i.num_ways):
             mem = m.submodules[f"mem_tag_way{way_idx}"] = memory.Memory(
-                shape=self.p.l1i.tag_layout,
+                shape=L1ITag(),
                 depth=self.p.l1i.num_sets,
                 init=[],
             )
 
             for idx in range(self.num_rp):
                 rp = mem.read_port()
-                tag_data = Signal(self.p.l1i.tag_layout)
+                tag_data = Signal(L1ITag())
                 m.d.comb += [
                     tag_data.eq(rp.data),
                     rp.en.eq(self.rp[idx].req.valid),
@@ -169,7 +170,7 @@ class L1ICacheTagArray(Component):
 
             for idx in range(self.num_pp):
                 pp = mem.read_port()
-                tag_data = Signal(self.p.l1i.tag_layout)
+                tag_data = Signal(L1ITag())
                 m.d.comb += [
                     tag_data.eq(pp.data),
                     pp.en.eq(self.pp[idx].req.valid),

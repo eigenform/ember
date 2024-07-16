@@ -7,7 +7,8 @@ from ember.common.pipeline import *
 from ember.common.coding import ChainedPriorityEncoder
 from ember.param import *
 from ember.front.predecode import *
-from ember.uarch.fetch import *
+from ember.uarch.front import *
+from ember.front.bp.l0_btb import *
 
 class NFPRequest(Signature):
     """ A request for a next-fetch prediction. 
@@ -39,7 +40,7 @@ class NFPResponse(Signature):
     def __init__(self, p: EmberParams):
         super().__init__({
             "valid": Out(1),
-            "npc": Out(p.vaddr),
+            "pc": Out(p.vaddr),
         })
 
 
@@ -51,12 +52,13 @@ class NextFetchPredictor(Component):
 
     In general, the logic for this should be something like: 
 
-    1. Combinationally read metadata about the associated fetch block
-    2. Go to the offset in the fetch block given by the offset bits in the PC
-    3. Find the first predicted-taken control-flow instruction
-    4. Invoke the appropriate L0 predictor
-    5. If no predicted-taken control-flow instruction is found, fallback to
-       predicting the address of the next-sequential fetch block. 
+    1. Maintain a small associative cache of predecoded blocks. 
+       Combinationally read metadata about the associated fetch block. 
+    2. On a miss, fallback to predicting the address of the next-sequential 
+       fetch block. 
+    3. On a hit, go to the offset in the hitting fetch block given by the 
+       offset bits in the PC and find the first predicted-taken control-flow 
+       instruction.
 
     """
 
@@ -73,12 +75,17 @@ class NextFetchPredictor(Component):
 
         fblk_addr = self.req.pc.get_fetch_addr()
 
+        l0_btb = m.submodules.l0_btb = L0BranchTargetBuffer(self.p)
 
+        m.d.comb += [
+            l0_btb.rp.req.pc.eq(self.req.pc),
+            l0_btb.rp.req.valid.eq(self.req.valid),
+        ]
 
         # Predict the next-sequential fetch block address
         m.d.comb += [
             self.resp.valid.eq(self.req.valid),
-            self.resp.npc.eq(fblk_addr + 0x20),
+            self.resp.pc.eq(fblk_addr + 0x20),
         ]
 
         return m

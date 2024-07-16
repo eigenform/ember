@@ -10,8 +10,6 @@ from ember.riscv.encoding import *
 from ember.uarch.mop import *
 from ember.param import *
 
-from ember.uarch.fetch import FTQIndex
-
 class Rv32GroupDecoder(Component):
     """ A decoder for a single RISC-V instruction. 
 
@@ -104,7 +102,7 @@ class DecodeRequest(Signature):
     def __init__(self, p: EmberParams, width: int): 
         super().__init__({
             "valid": Out(1),
-            "ftq_idx": Out(FTQIndex(p)),
+            "ftq_idx": Out(p.ftq.index_shape),
             "inst": Out(32).array(width),
         })
 
@@ -112,7 +110,7 @@ class DecodeResponse(Signature):
     def __init__(self, p: EmberParams, width: int): 
         super().__init__({
             "valid": Out(1),
-            "ftq_idx": Out(FTQIndex(p)),
+            "ftq_idx": Out(p.ftq.index_shape),
             "inst": Out(32).array(width),
         })
 

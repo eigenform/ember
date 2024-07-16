@@ -147,6 +147,17 @@ words in a successful L1I cache hit. Each predecoder has a full 32-bit adder
 which computes the target addresses for direct branch and jump instructions. 
 The predecode unit sends this information to the branch prediction unit. 
 
+Predecoding allows us the following: 
+
+1. We can discover unconditionally-taken control-flow instructions (and their 
+   target addresses) immediately after a cacheline has been fetched. 
+   This allows us to quickly obtain the next cacheline that must be fetched. 
+
+2. We can discover conditional control-flow instructions immediately after
+   a cacheline has been fetched. This allows us to begin predicting the
+   branch direction early in the pipeline. 
+
+
 The next-sequential fetch block can be predicted when the following conditions
 are met (and ideally, recognized as early as possible in the pipeline):
 
@@ -172,7 +183,7 @@ L0 Predictions
 ^^^^^^^^^^^^^^
 
 The L0 predictors use the program counter value (and information about the 
-associated fetch block) to predict the next program counter value.
+associated fetch block) to immediately predict the next program counter value.
 
 This amounts to predicting *the existence* of an impending control-flow 
 instruction within the block **and** predicting *the target address* of that 
@@ -192,8 +203,17 @@ next-sequential fetch block.
 L0 prediction ensures that a new control-flow request is fed back into the CFC 
 each cycle, allowing us to avoid inserting bubbles into the pipeline. 
 
-Relative to other predictors, storage for L0 predictors must be small in order 
-to support accesses that will complete within a single cycle.
+This is mainly supported by the **L0 branch target buffer (BTB)**: a 
+fully-associative storage whose entries correspond to predecoded L1I 
+cachelines which contain:
+
+- At least one *unconditionally-taken* control-flow instruction
+- At least one *conditional, biased-taken* control-flow instruction
+
+A match in the L0 BTB indicates that the address of the next-fetch cacheline 
+is known with very high confidence. 
+Relative to other predictors, storage must be small in order to support 
+accesses that will complete within a single cycle.
 
 .. note::
     Intuitively, it seems like the following situations can be ("should be able 
@@ -203,13 +223,15 @@ to support accesses that will complete within a single cycle.
        jump/call, use the cached target address
     2. If the fetch block for this program counter is terminated by a return 
        instruction, use the L0 RAP 
-    3. If the fetch block for this program counter is terminated by a biased-taken
-       branch, use the cached target address
+    3. If the fetch block for this program counter is terminated by a *biased-taken*
+       conditional branch, use the cached target address
 
     The strategy for determining which control-flow instruction to use is: 
 
-    1. Go to the offset of the entrypoint into the fetch block
-    2. Find the first instruction which is predicted-taken
+    1. Find the cacheline in an fully-associative storage
+    2. Go to the offset of the entrypoint into the fetch block
+    3. Select the first instruction which is unconditionally-taken or predicted-taken
+       
     3. Invoke the appropriate L0 predictor
     4. If no instruction is predicted-taken, predict the next-sequential block
 

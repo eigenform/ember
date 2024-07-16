@@ -3,7 +3,7 @@ from ember.param import *
 from ember.sim.common import Testbench
 from ember.sim.fakeram import *
 from ember.front.ftq import *
-from ember.uarch.fetch import *
+from ember.uarch.front import *
 
 from amaranth import *
 from amaranth.sim import *

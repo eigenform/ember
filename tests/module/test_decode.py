@@ -45,13 +45,13 @@ def tb_decode_simple(dut: Rv32GroupDecoder):
 class DecodeUnitTests(unittest.TestCase):
     # NOTE: Why does this take so long to elaborate? 
     #def test_decode_elab(self):
-    #    dut = Rv32GroupDecoder(EmberParams)
+    #    dut = Rv32GroupDecoder(EmberParams())
     #    with open("/tmp/Rv32Decoder.v", "w") as f:
     #        f.write(verilog.convert(dut, name="Rv32Decoder"))
 
     def test_decode_simple(self):
         tb = TestbenchComb(
-            Rv32GroupDecoder(EmberParams),
+            Rv32GroupDecoder(EmberParams()),
             tb_decode_simple,
             "tb_decode_simple"
         )

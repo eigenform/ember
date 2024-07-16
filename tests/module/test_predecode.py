@@ -73,7 +73,7 @@ def tb_predecode_simple(dut: Rv32Predecoder):
 class PredecodeUnitTests(unittest.TestCase):
     def test_predecode_simple(self):
         tb = TestbenchComb(
-            Rv32Predecoder(EmberParams),
+            Rv32Predecoder(EmberParams()),
             tb_predecode_simple,
             "tb_predecode_simple"
         )

@@ -4,12 +4,29 @@ from amaranth.utils import ceil_log2, exact_log2
 from amaranth.lib.wiring import *
 from amaranth.lib.data import *
 
-from ember.param import *
+from ember.param import EmberParams
+from ember.param.front import *
+from ember.uarch.addr import *
+from ember.uarch.mop import *
 
-class FTQIndex(Shape):
-    """ An index into the FTQ. """
-    def __init__(self, param: EmberParams):
-        super().__init__(width=exact_log2(param.fetch.ftq_depth))
+
+class L1ICacheline(ArrayLayout):
+    def __init__(self, p: EmberParams):
+        super().__init__(unsigned(p.l1i.word_width), p.l1i.line_depth)
+
+class L1ITag(StructLayout):
+    def __init__(self):
+        super().__init__({
+            "valid": unsigned(1),
+            "ppn": PhysicalPageNumberSv32(),
+        })
+
+
+
+#class FTQIndex(Shape):
+#    """ An index into the FTQ. """
+#    def __init__(self, ftq_depth: int):
+#        super().__init__(width=exact_log2(ftq_depth))
 
 class FTQEntryState(Enum, shape=4):
     """ State of an FTQ entry.
@@ -62,7 +79,7 @@ class FTQEntry(StructLayout):
             "prefetched": unsigned(1),
             "predicted": unsigned(1),
             "passthru": unsigned(1),
-            "id": FTQIndex(param),
+            "id": param.ftq.index_shape,
         })
 
 
@@ -79,8 +96,8 @@ class DecodeQueueEntry(StructLayout):
     """
     def __init__(self, p: EmberParams):
         super().__init__({
-            "data": p.l1i.line_layout,
-            "ftq_idx": FTQIndex(p),
+            "data": L1ICacheline(p),
+            "ftq_idx": p.ftq.index_shape,
         })
 
 
@@ -120,7 +137,7 @@ class FetchRequest(Signature):
             "valid": Out(1),
             "vaddr": Out(p.vaddr),
             "passthru": Out(1),
-            "ftq_idx": Out(FTQIndex(p)),
+            "ftq_idx": Out(p.ftq.index_shape),
         })
 
 class FetchResponse(Signature):
@@ -145,7 +162,7 @@ class FetchResponse(Signature):
             "valid": Out(1),
             "vaddr": Out(p.vaddr),
             "sts": Out(FetchResponseStatus),
-            "ftq_idx": Out(FTQIndex(p)),
+            "ftq_idx": Out(p.ftq.index_shape),
         })
 
 class FetchData(Signature):
@@ -167,8 +184,8 @@ class FetchData(Signature):
         super().__init__({
             "valid": Out(1),
             "vaddr": Out(p.vaddr),
-            "ftq_idx": Out(FTQIndex(p)),
-            "data": Out(p.l1i.line_layout),
+            "ftq_idx": Out(p.ftq.index_shape),
+            "data": Out(L1ICacheline(p)),
         })
 
 
@@ -190,6 +207,12 @@ class PrefetchResponseStatus(Enum, shape=2):
     L1_MISS  = 2
     TLB_MISS = 3
 
+class PrefetchPipelineStatus(Signature):
+    def __init__(self):
+        super().__init__({
+            "ready": Out(1),
+        })
+
 class PrefetchRequest(Signature):
     """ A request to prefetch a cacheline into the L1I cache. 
 
@@ -209,7 +232,7 @@ class PrefetchRequest(Signature):
         super().__init__({
             "valid": Out(1),
             "passthru": Out(1),
-            "ftq_idx": Out(FTQIndex(param)),
+            "ftq_idx": Out(param.ftq.index_shape),
             "vaddr": Out(param.vaddr),
         })
 
@@ -233,7 +256,41 @@ class PrefetchResponse(Signature):
             "valid": Out(1),
             "vaddr": Out(p.vaddr),
             "sts": Out(FetchResponseStatus),
-            "ftq_idx": Out(FTQIndex(p)),
+            "ftq_idx": Out(p.ftq.index_shape),
+        })
+
+class PredecodeInfo(StructLayout):
+    """ A predecoded RISC-V instruction. 
+
+    Fields
+    ======
+    ill:
+        The encoding for this instruction is invalid/illegal.
+    cf_op: :class:`ControlFlowOp`
+        Control flow operation associated with this instruction.
+    rd: 
+        Architectural destination register RD
+    rs1: 
+        Architectural source register RS1
+    imm:
+        Extracted immediate value
+    tgt:
+        Computed target address
+    tgt_valid:
+        The target address is valid. 
+
+
+    """
+    def __init__(self, vaddr: VirtualAddress):
+        super().__init__({
+            "ill": unsigned(1),
+            "is_cf": unsigned(1),
+            "cf_op": ControlFlowOp,
+            "rd": unsigned(5),
+            "rs1": unsigned(5),
+            "imm": RvImmData(),
+            "tgt": vaddr,
+            "tgt_valid": unsigned(1),
         })
 
 

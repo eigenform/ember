@@ -8,7 +8,7 @@ from amaranth_soc.wishbone import Interface as WishboneInterface
 from ember.common import *
 from ember.common.queue import *
 from ember.param import *
-from ember.uarch.fetch import *
+from ember.uarch.front import *
 
 from ember.front.fetch import *
 from ember.front.l1i import *
@@ -59,7 +59,7 @@ class EmberFrontend(Component):
         ftq   = m.submodules.ftq   = FetchTargetQueue(self.p)
         ifu   = m.submodules.ifu   = FetchUnit(self.p)
         l1i   = m.submodules.l1i   = L1ICache(self.p)
-        itlb  = m.submodules.itlb  = L1ICacheTLB(self.p.l1i)
+        itlb  = m.submodules.itlb  = L1ICacheTLB(self.p)
         ifill = m.submodules.ifill = L1IFillUnit(self.p)
         pfu   = m.submodules.pfu   = L1IPrefetchUnit(self.p)
         pdu   = m.submodules.pdu   = PredecodeUnit(self.p)
@@ -68,7 +68,7 @@ class EmberFrontend(Component):
         connect(m, cfc.alloc_req, ftq.alloc_req)
         connect(m, ftq.sts, cfc.ftq_sts)
         connect(m, flipped(self.dbg_cf_req), cfc.dbg)
-        connect(m, bpu.cf_req, cfc.bpu)
+        #connect(m, bpu.cf_req, cfc.bpu)
 
         # IFU connections
         connect(m, ifu.l1i_rp, l1i.rp[0])
@@ -105,6 +105,7 @@ class EmberFrontend(Component):
         connect(m, ftq.fetch_resp, ifu.resp)
         connect(m, ftq.prefetch_req, pfu.req)
         connect(m, ftq.prefetch_resp, pfu.resp)
+        connect(m, ftq.prefetch_sts, pfu.sts)
         connect(m, ftq.ifill_resp[0], ifill.resp[0])
         connect(m, ftq.ifill_resp[1], ifill.resp[1])
 

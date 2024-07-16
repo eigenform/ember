@@ -23,30 +23,30 @@ class L1ICacheTLBReadPort(Signature):
         """ A request to L1I TLB to resolve the physical page number
         for the provided virtual page number. 
         """
-        def __init__(self, param: L1ICacheParams):
+        def __init__(self):
             super().__init__({
                 'valid': Out(1),
                 'vpn': Out(VirtualPageNumberSv32()),
             })
     class Response(Signature):
         """ A response from the L1I TLB containing a physical page number. """
-        def __init__(self, param: L1ICacheParams):
+        def __init__(self):
             super().__init__({
                 'valid': Out(1),
                 'hit': Out(1),
                 'pte': Out(PageTableEntrySv32()),
             })
 
-    def __init__(self, param: L1ICacheParams):
+    def __init__(self):
         super().__init__({
-            'req': Out(self.Request(param)),
-            'resp': In(self.Response(param)),
+            'req': Out(self.Request()),
+            'resp': In(self.Response()),
         })
 
 
 class L1ICacheTLBFillRequest(Signature):
     """ A request to write an entry into the L1I TLB. """
-    def __init__(self, param: L1ICacheParams):
+    def __init__(self):
         super().__init__({
             'valid': Out(1),
             'pte': Out(PageTableEntrySv32()),
@@ -80,16 +80,16 @@ class L1ICacheTLB(Component):
 
     """
 
-    def __init__(self, param: L1ICacheParams):
+    def __init__(self, param: EmberParams):
         self.p = param
-        self.depth = self.p.tlb.num_entries
+        self.depth = param.l1i.tlb.depth
 
         #self.lfsr = LFSR(degree=ceil_log2(self.depth))
 
         signature = Signature({
-            "fill_req": In(L1ICacheTLBFillRequest(param)),
-            "rp": In(L1ICacheTLBReadPort(param)),
-            "pp": In(L1ICacheTLBReadPort(param)),
+            "fill_req": In(L1ICacheTLBFillRequest()),
+            "rp": In(L1ICacheTLBReadPort()),
+            "pp": In(L1ICacheTLBReadPort()),
         })
         super().__init__(signature)
 

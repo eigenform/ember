@@ -1,5 +1,6 @@
 
 from amaranth import *
+from amaranth import ShapeCastable
 from amaranth.lib.wiring import *
 from amaranth.lib.data import *
 from amaranth.lib.enum import *
@@ -61,7 +62,7 @@ class BankedMemory(Component):
 
     Each bank has a single read port and a single write port (with bypassing).
     """
-    def __init__(self, num_banks: int, depth: int, data_shape: Shape):
+    def __init__(self, num_banks: int, depth: int, data_shape: ShapeCastable):
         self.num_banks = num_banks
         self.depth = depth
         self.data_shape = data_shape

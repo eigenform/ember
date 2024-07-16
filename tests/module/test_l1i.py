@@ -124,11 +124,11 @@ class L1ICacheHarness(object):
         tag_data = []
         tag_valid = []
         line_data = []
-        for way in range(EmberParams.l1i.num_ways):
+        for way in range(EmberParams().l1i.num_ways):
             v = yield self.dut.rp[rp_idx].resp.tag_data[way].valid
             tag = yield self.dut.rp[rp_idx].resp.tag_data[way].ppn
             line = []
-            for i in range(EmberParams.l1i.line_depth):
+            for i in range(EmberParams().l1i.line_depth):
                 j = yield self.dut.rp[rp_idx].resp.line_data[way][i]
                 line.append(j)
             tag_data.append(tag)
@@ -140,7 +140,7 @@ class L1ICacheHarness(object):
         valid = yield self.dut.pp[pp_idx].resp.valid
         tag_data = []
         tag_valid = []
-        for way in range(EmberParams.l1i.num_ways):
+        for way in range(EmberParams().l1i.num_ways):
             v = yield self.dut.pp[pp_idx].resp.tag_data[way].valid
             tag = yield self.dut.pp[pp_idx].resp.tag_data[way].ppn
             tag_data.append(tag)
@@ -205,13 +205,13 @@ def tb_l1ifill(dut: L1IFillUnit):
 class L1ICacheTests(unittest.TestCase):
 
     #def test_l1icache_elaborate(self):
-    #    dut = L1ICache(EmberParams)
+    #    dut = L1ICache(EmberParams())
     #    with open("/tmp/L1ICache.v", "w") as f:
     #        f.write(verilog.convert(dut))
 
     def test_l1icache_data_array_rw(self):
         tb = Testbench(
-            L1ICacheDataArray(EmberParams), 
+            L1ICacheDataArray(EmberParams()), 
             tb_data_array_rw,
             "tb_data_array_rw"
         )
@@ -219,7 +219,7 @@ class L1ICacheTests(unittest.TestCase):
 
     def test_l1itlb(self):
         tb = Testbench(
-            L1ICacheTLB(EmberParams.l1i), 
+            L1ICacheTLB(EmberParams()),
             tb_l1itlb,
             "tb_l1itlb"
         )
@@ -227,7 +227,7 @@ class L1ICacheTests(unittest.TestCase):
 
     def test_l1icache_rw(self):
         tb = Testbench(
-            L1ICache(EmberParams),
+            L1ICache(EmberParams()),
             tb_l1icache_rw,
             "tb_l1icache_rw"
         )
@@ -235,7 +235,7 @@ class L1ICacheTests(unittest.TestCase):
 
     def test_l1ifill(self):
         tb = Testbench(
-            L1IFillUnit(EmberParams),
+            L1IFillUnit(EmberParams()),
             tb_l1ifill,
             "tb_l1ifill"
         )

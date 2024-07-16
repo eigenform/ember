@@ -13,6 +13,7 @@ from ember.common import *
 from ember.front.l1i_array import *
 from ember.riscv.paging import *
 from ember.param import *
+from ember.uarch.front import *
 
 class L1ICacheProbePort(Signature):
     """ An L1I cache probe port. """
@@ -30,7 +31,7 @@ class L1ICacheProbePort(Signature):
         def __init__(self, p: EmberParams):
             super().__init__({
                 "valid": Out(1),
-                "tag_data": Out(p.l1i.tag_layout).array(p.l1i.num_ways),
+                "tag_data": Out(L1ITag()).array(p.l1i.num_ways),
             })
 
     def __init__(self, p: EmberParams):
@@ -57,8 +58,8 @@ class L1ICacheReadPort(Signature):
         def __init__(self, p: EmberParams):
             super().__init__({
                 "valid": Out(1),
-                "tag_data": Out(p.l1i.tag_layout).array(p.l1i.num_ways),
-                "line_data": Out(p.l1i.line_layout).array(p.l1i.num_ways),
+                "tag_data": Out(L1ITag()).array(p.l1i.num_ways),
+                "line_data": Out(L1ICacheline(p)).array(p.l1i.num_ways),
             })
 
     def __init__(self, p: EmberParams):
@@ -76,8 +77,8 @@ class L1ICacheWritePort(Signature):
                 "valid": Out(1),
                 "set": Out(ceil_log2(p.l1i.num_sets)),
                 "way": Out(ceil_log2(p.l1i.num_ways)),
-                "tag_data": Out(p.l1i.tag_layout),
-                "line_data": Out(p.l1i.line_layout),
+                "tag_data": Out(L1ITag()),
+                "line_data": Out(L1ICacheline(p)),
             })
     class Response(Signature):
         """ Response to a write request. """

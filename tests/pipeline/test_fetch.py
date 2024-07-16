@@ -5,7 +5,7 @@ from ember.param import *
 from tests.common import *
 
 from ember.sim.common import *
-from ember.uarch.fetch import *
+from ember.uarch.front import *
 from ember.sim.fakeram import *
 from ember.core import EmberFrontend
 
@@ -80,13 +80,13 @@ def tb_fetch_miss2hit(dut: EmberFrontend):
 class FetchUnitTests(EmberTestCase):
     
     #def test_fetch_elab(self):
-    #    m = EmberFrontend(EmberParams)
+    #    m = EmberFrontend(EmberParams())
     #    with open("/tmp/EmberFrontend.v", "w") as f:
     #        f.write(verilog.convert(m, emit_src=False, name="EmberFrontend"))
 
     def test_fetch_miss2hit(self):
         tb = Testbench(
-            EmberFrontend(EmberParams), 
+            EmberFrontend(EmberParams()), 
             tb_fetch_miss2hit,
             "tb_fetch_miss2hit"
         )

@@ -16,7 +16,7 @@ from ember.front.predecode import *
 from ember.riscv.paging import *
 from ember.sim.fakeram import *
 
-from ember.uarch.fetch import *
+from ember.uarch.front import *
 
 
 class FetchUnit(Component):
@@ -60,7 +60,7 @@ class FetchUnit(Component):
         self.stage = PipelineStages()
         self.stage.add_stage(1, {
             "vaddr": self.p.vaddr,
-            "ftq_idx": FTQIndex(self.p),
+            "ftq_idx": self.p.ftq.index_shape,
             "passthru": unsigned(1),
         })
 
@@ -69,7 +69,7 @@ class FetchUnit(Component):
             "resp": Out(FetchResponse(param)),
 
             "l1i_rp": Out(L1ICacheReadPort(param)),
-            "tlb_rp": Out(L1ICacheTLBReadPort(param.l1i)),
+            "tlb_rp": Out(L1ICacheTLBReadPort()),
 
             "ifill_req": Out(L1IFillRequest(param)),
             "ifill_sts": In(L1IFillStatus(param)),
@@ -137,7 +137,7 @@ class FetchUnit(Component):
 
         m.submodules.lfsr = lfsr = EnableInserter(C(1,1))(self.lfsr)
         m.submodules.way_select = way_select = \
-                L1IWaySelect(self.p.l1i.num_ways, self.p.l1i.tag_layout)
+                L1IWaySelect(self.p.l1i.num_ways, L1ITag())
         l1_line_data = Array(
             self.l1i_rp.resp.line_data[way_idx]
             for way_idx in range(self.p.l1i.num_ways)
@@ -207,6 +207,7 @@ class FetchUnit(Component):
         hit_valid = (sts == FetchResponseStatus.L1_HIT)
         m.d.sync += [
             self.pd_req.cline.eq(tag_line),
+            self.pd_req.way.eq(tag_way),
             self.pd_req.valid.eq(hit_valid),
             self.pd_req.vaddr.eq(Mux(hit_valid, vaddr, 0)),
             self.pd_req.ftq_idx.eq(Mux(hit_valid, ftq_idx, 0)),

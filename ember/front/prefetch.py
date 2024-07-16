@@ -11,7 +11,7 @@ from ember.front.l1i import L1ICacheProbePort, L1IWaySelect
 from ember.front.itlb import L1ICacheTLBReadPort
 from ember.front.ifill import L1IFillRequest, L1IFillStatus
 
-from ember.uarch.fetch import *
+from ember.uarch.front import *
 
 class L1IPrefetchUnit(Component):
     """ Instruction prefetch unit. 
@@ -39,21 +39,29 @@ class L1IPrefetchUnit(Component):
         self.stage = PipelineStages()
         self.stage.add_stage(1, {
             "vaddr": self.p.vaddr,
-            "ftq_idx": FTQIndex(self.p),
+            "ftq_idx": self.p.ftq.index_shape,
             "passthru": unsigned(1),
         })
 
         sig = Signature({
+            "sts": Out(PrefetchPipelineStatus()),
             "req": In(PrefetchRequest(param)),
             "resp": Out(PrefetchResponse(param)),
             "l1i_pp": Out(L1ICacheProbePort(param)),
-            "tlb_pp": Out(L1ICacheTLBReadPort(param)),
+            "tlb_pp": Out(L1ICacheTLBReadPort()),
             "ifill_req": Out(L1IFillRequest(param)),
             "ifill_sts": In(L1IFillStatus(param)),
         })
         super().__init__(sig)
 
     def elaborate_s0(self, m: Module):
+
+        # FIXME: Stall for fill unit availability?
+        m.d.sync += [
+            self.sts.ready.eq(self.stage[1].ready)
+        ]
+
+
         with m.If(self.req.passthru):
             m.d.comb += [
                 self.tlb_pp.req.valid.eq(0),
@@ -68,19 +76,27 @@ class L1IPrefetchUnit(Component):
             self.l1i_pp.req.valid.eq(self.req.valid),
             self.l1i_pp.req.set.eq(self.req.vaddr.l1i.set),
         ]
-        m.d.sync += [
-            self.stage[1].valid.eq(self.req.valid),
-            self.stage[1].vaddr.eq(self.req.vaddr),
-            self.stage[1].passthru.eq(self.req.passthru),
-            self.stage[1].ftq_idx.eq(self.req.ftq_idx),
-        ]
+
+        # FIXME: Pass to the next stage, otherwise wait
+        with m.If(self.stage[1].ready & self.req.valid):
+            m.d.sync += [
+                self.stage[1].valid.eq(self.req.valid),
+                self.stage[1].vaddr.eq(self.req.vaddr),
+                self.stage[1].passthru.eq(self.req.passthru),
+                self.stage[1].ftq_idx.eq(self.req.ftq_idx),
+            ]
 
     def elaborate_s1(self, m: Module): 
 
         m.submodules.lfsr = lfsr = \
                 EnableInserter(C(1,1))(LFSR(degree=4))
         m.submodules.way_select = way_select = \
-                L1IWaySelect(self.p.l1i.num_ways, self.p.l1i.tag_layout)
+                L1IWaySelect(self.p.l1i.num_ways, L1ITag())
+
+        ifill_ready = self.ifill_sts.ready
+
+        # The fill unit is available to accept a request
+        m.d.comb += self.stage[1].ready.eq(ifill_ready)
 
         vaddr    = self.stage[1].vaddr
         stage_ok = self.stage[1].valid
@@ -123,6 +139,7 @@ class L1IPrefetchUnit(Component):
             resolved_paddr.sv32.ppn.eq(tlb_pte.ppn),
             resolved_paddr.sv32.offset.eq(vaddr.sv32.offset),
         ]
+
         # Inputs to the L1I fill unit
         paddr_sel = Mux(self.stage[1].passthru, 
             vaddr, 
@@ -140,12 +157,14 @@ class L1IPrefetchUnit(Component):
         m.d.sync += [
         ]
 
-        m.d.sync += [
-            self.resp.sts.eq(sts),
-            self.resp.vaddr.eq(vaddr),
-            self.resp.valid.eq(self.stage[1].valid),
-            self.resp.ftq_idx.eq(ftq_idx),
-        ]
+        # Respond to the FTQ 
+        with m.If(ifill_ready):
+            m.d.sync += [
+                self.resp.sts.eq(sts),
+                self.resp.vaddr.eq(vaddr),
+                self.resp.valid.eq(self.stage[1].valid),
+                self.resp.ftq_idx.eq(ftq_idx),
+            ]
 
     def elaborate(self, platform):
         m = Module()

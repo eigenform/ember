@@ -11,41 +11,7 @@ from ember.front.l1i import *
 from ember.front.itlb import *
 from ember.riscv.encoding import *
 from ember.uarch.mop import ControlFlowOp
-from ember.uarch.fetch import *
-
-class PredecodeInfo(StructLayout):
-    """ A predecoded RISC-V instruction. 
-
-    Fields
-    ======
-    ill:
-        The encoding for this instruction is invalid/illegal.
-    cf_op: :class:`ControlFlowOp`
-        Control flow operation associated with this instruction.
-    rd: 
-        Architectural destination register RD
-    rs1: 
-        Architectural source register RS1
-    imm:
-        Extracted immediate value
-    tgt:
-        Computed target address
-    tgt_valid:
-        The target address is valid. 
-
-
-    """
-    def __init__(self, p: EmberParams):
-        super().__init__({
-            "ill": unsigned(1),
-            "is_cf": unsigned(1),
-            "cf_op": ControlFlowOp,
-            "rd": unsigned(5),
-            "rs1": unsigned(5),
-            "imm": RvImmData(),
-            "tgt": p.vaddr,
-            "tgt_valid": unsigned(1),
-        })
+from ember.uarch.front import *
 
 class PredecodeRequest(Signature):
     """ A request to pre-decode an L1I cacheline. 
@@ -59,15 +25,18 @@ class PredecodeRequest(Signature):
     ftq_idx:
         The FTX index associated with this request
     cline:
-        L1I cache line data
+        L1I cacheline data
+    way:
+        Hitting way index used to retrieve the cacheline
 
     """
     def __init__(self, p: EmberParams):
         super().__init__({
             "valid": Out(1),
             "vaddr": Out(p.vaddr),
-            "ftq_idx": Out(FTQIndex(p)),
-            "cline": Out(p.l1i.line_layout),
+            "ftq_idx": Out(p.ftq.index_shape),
+            "cline": Out(L1ICacheline(p)),
+            "way": Out(exact_log2(p.l1i.num_ways)),
         })
 
 class PredecodeResponse(Signature):
@@ -91,8 +60,8 @@ class PredecodeResponse(Signature):
         super().__init__({
             "valid": Out(1),
             "vaddr": Out(p.vaddr),
-            "ftq_idx": Out(FTQIndex(p)),
-            "info": Out(PredecodeInfo(p)).array(p.l1i.line_depth),
+            "ftq_idx": Out(p.ftq.index_shape),
+            "info": Out(PredecodeInfo(p.vaddr)).array(p.l1i.line_depth),
             "info_valid": Out(1).array(p.l1i.line_depth),
         })
 
@@ -127,7 +96,7 @@ class Rv32Predecoder(Component):
             "inst": In(32),
             "inst_valid": In(1),
             "pc": In(param.rv.xlen),
-            "info": Out(PredecodeInfo(param)),
+            "info": Out(PredecodeInfo(param.vaddr)),
             "info_valid": Out(1),
         })
         super().__init__(signature)
@@ -264,7 +233,7 @@ class PredecodeUnit(Component):
         m = Module()
 
         # Instantiate a predecoder for each word in a cacheline. 
-        info = Array(Signal(PredecodeInfo(self.p)) for _ in range(self.width))
+        info = Array(Signal(PredecodeInfo(self.p.vaddr)) for _ in range(self.width))
         info_valid = Array(Signal() for _ in range(self.width))
         pd = [ Rv32Predecoder(self.p) for _ in range(self.width) ]
         for idx in range(self.width):

@@ -5,6 +5,7 @@ from amaranth.lib.wiring import *
 from amaranth.utils import log2_int, exact_log2
 
 from ember.param import *
+from ember.uarch.front import *
 from ember.axi import *
 
 class MockIBusController(Component):
@@ -16,7 +17,7 @@ class MockIBusController(Component):
         self.p = param
         signature = Signature({
             "addr": Out(32),
-            "data": In(self.p.l1i.line_layout),
+            "data": In(L1ICacheline(param)),
         })
         super().__init__(signature)
 

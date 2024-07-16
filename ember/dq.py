@@ -6,7 +6,7 @@ from amaranth.lib.wiring import *
 from ember.common import *
 from ember.common.queue import *
 from ember.param import *
-from ember.uarch.fetch import *
+from ember.uarch.front import *
 
 class DecodeQueue(Component):
     """ A queue for instructions waiting to move through the mid-core. 

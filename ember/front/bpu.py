@@ -7,7 +7,7 @@ from ember.common.pipeline import *
 from ember.common.coding import ChainedPriorityEncoder
 from ember.param import *
 from ember.front.predecode import *
-from ember.uarch.fetch import *
+from ember.uarch.front import *
 from ember.front.cfc import ControlFlowRequest
 
 

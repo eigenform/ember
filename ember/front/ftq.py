@@ -11,7 +11,7 @@ from ember.front.itlb import *
 from ember.front.ifill import *
 from ember.front.prefetch import *
 
-from ember.uarch.fetch import *
+from ember.uarch.front import *
 
 
 class FTQAllocRequest(Signature):
@@ -48,14 +48,24 @@ class FTQFreeRequest(Signature):
     def __init__(self, param: EmberParams):
         super().__init__({
             "valid": Out(1),
-            "id": Out(FTQIndex(param)),
+            "id": Out(param.ftq.index_shape),
         })
 
 class FTQStatusBus(Signature):
+    """ Status output from the FTQ.
+
+    Members
+    =======
+    ready:
+        The FTQ is ready to allocate 
+    next_ftq_idx:
+        The index of the next-allocated FTQ entry
+
+    """
     def __init__(self, p: EmberParams):
         super().__init__({
             "ready": Out(1),
-            "next_ftq_idx": Out(FTQIndex(p)),
+            "next_ftq_idx": Out(p.ftq.index_shape),
 
         })
 
@@ -137,7 +147,7 @@ class FetchTargetQueue(Component):
 
     def __init__(self, param: EmberParams):
         self.p = param
-        self.depth = param.fetch.ftq_depth
+        self.depth = param.ftq.depth
         signature = Signature({
 
             "sts": Out(FTQStatusBus(param)),
@@ -151,6 +161,7 @@ class FetchTargetQueue(Component):
 
             "prefetch_req": Out(PrefetchRequest(param)),
             "prefetch_resp": In(PrefetchResponse(param)),
+            "prefetch_sts": In(PrefetchPipelineStatus()),
 
             "ifill_resp": In(L1IFillResponse(param)).array(2),
         })
@@ -164,9 +175,9 @@ class FetchTargetQueue(Component):
             for idx in range(self.depth)
         )
 
-        r_fptr = Signal(FTQIndex(self.p), init=0)
-        r_pptr = Signal(FTQIndex(self.p), init=1)
-        r_wptr = Signal(FTQIndex(self.p), init=0)
+        r_fptr = Signal(self.p.ftq.index_shape, init=0)
+        r_pptr = Signal(self.p.ftq.index_shape, init=1)
+        r_wptr = Signal(self.p.ftq.index_shape, init=0)
         r_used = Signal(ceil_log2(self.depth+1), init=0)
         r_full = Signal()
 
@@ -194,6 +205,8 @@ class FetchTargetQueue(Component):
                 r_used.eq(next_used),
             ]
 
+        # ----------------------------------------------------------------
+
         # Translate incoming IFU response to the next FTQ entry state. 
         ifu_resp = self.fetch_resp
         ifu_resp_state = Signal(FTQEntryState)
@@ -209,6 +222,14 @@ class FetchTargetQueue(Component):
                 m.d.comb += ifu_resp_state.eq(FTQEntryState.XLAT)
             with m.Case(FetchResponseStatus.L1_HIT):
                 m.d.comb += ifu_resp_state.eq(FTQEntryState.COMPLETE)
+
+        # Default assignment for IFU request output
+        m.d.sync += [
+            self.fetch_req.valid.eq(0),
+            self.fetch_req.vaddr.eq(0),
+            self.fetch_req.passthru.eq(0),
+
+        ]
 
         # Translate incoming PFU probe response to the next FTQ entry state. 
         pfu_resp = self.prefetch_resp
@@ -226,12 +247,8 @@ class FetchTargetQueue(Component):
             with m.Case(FetchResponseStatus.L1_HIT):
                 m.d.comb += pfu_resp_state.eq(FTQEntryState.PENDING)
 
-        # Default assignment for IFU/PFU request output
+        # Default assignment for PFU request output
         m.d.sync += [
-            self.fetch_req.valid.eq(0),
-            self.fetch_req.vaddr.eq(0),
-            self.fetch_req.passthru.eq(0),
-
             self.prefetch_req.valid.eq(0),
             self.prefetch_req.vaddr.eq(0),
             self.prefetch_req.passthru.eq(0),
@@ -293,6 +310,25 @@ class FetchTargetQueue(Component):
                         self.fetch_req.passthru.eq(ifu_entry.passthru),
                         self.fetch_req.ftq_idx.eq(r_fptr),
                     ]
+
+        # ----------------------------------------------------------------
+
+        pfu_entry = data_arr[r_pptr]
+        with m.Switch(pfu_entry.state):
+            with m.Case(FTQEntryState.NONE): pass
+            with m.Case(FTQEntryState.PENDING):
+                with m.If(self.prefetch_sts.ready):
+                    m.d.sync += [
+                        pfu_entry.state.eq(FTQEntryState.PREFETCH),
+                        self.prefetch_req.valid.eq(1),
+                        self.prefetch_req.vaddr.eq(pfu_entry.vaddr),
+                        self.prefetch_req.passthru.eq(pfu_entry.passthru),
+                        self.prefetch_req.ftq_idx.eq(r_pptr),
+                        r_pptr.eq(r_pptr + 1),
+                    ]
+
+
+
 
 #        # ----------------------------------------------------------------
 #        # Pointer to the current entry moving through the PFU

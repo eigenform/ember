@@ -108,6 +108,9 @@ class VirtualAddressView(View):
         self.num_blk_bits = layout.num_blk_bits
         super().__init__(layout, target)
 
+    def get_fetch_off(self):
+        return self.fetch_off
+
     def get_fetch_addr(self):
         """ Return a full 32-bit address with the offset bits set to zero """
         res = Cat(C(0, self.num_off_bits), self.fetch_blk)

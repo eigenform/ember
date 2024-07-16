@@ -8,35 +8,14 @@ from ember.common.pipeline import *
 from ember.param import *
 from ember.front.ftq import FTQAllocRequest, FTQStatusBus
 from ember.front.nfp import *
-from ember.uarch.fetch import *
-
-class ControlFlowSource(Enum):
-    """ The source type for a control-flow request. 
-
-    Values
-    ======
-    NONE: 
-        No source
-    L0_PREDICT:
-        L0 (next-fetch) prediction
-    L1_PREDICT: 
-        L1 prediction
-    REDIR_PREDECODE: 
-        L0 prediction corrected from predecode
-
-    """
-    NONE       = 0 
-    L0_PREDICT = 1
-    L1_PREDICT = 2
-    REDIR_PREDECODE = 3
+from ember.uarch.front import *
 
 class ControlFlowRequest(Signature):
     def __init__(self, p: EmberParams):
         super().__init__({
             "valid": Out(1),
             "pc": Out(p.vaddr),
-            "src": Out(ControlFlowSource),
-            "parent_ftq_idx": Out(FTQIndex(p)),
+            "parent_ftq_idx": Out(p.ftq.index_shape),
         })
 
 
@@ -52,20 +31,17 @@ class ControlFlowController(Component):
     =====
     dbg:
         Incoming *architectural* control-flow request [from off-core]
-    redir:
-        Incoming *architectural* control-flow request [from mid-core]
-    bpu:
-        Incoming *speculative* control-flow request [from the BPU]
+    ftq_sts:
+        FTQ allocation status
+    alloc_req:
+        FTQ allocation request
 
     """
     def __init__(self, param: EmberParams):
         self.p = param
         super().__init__(Signature({
-            "dbg": In(ControlFlowRequest(param)),
-            "redir": In(ControlFlowRequest(param)),
-            "bpu": In(ControlFlowRequest(param)),
-
-            "ftq_sts": In(FTQStatusBus(param)),
+            "dbg":       In(ControlFlowRequest(param)),
+            "ftq_sts":   In(FTQStatusBus(param)),
             "alloc_req": Out(FTQAllocRequest(param)),
         }))
 
@@ -73,28 +49,59 @@ class ControlFlowController(Component):
         m = Module()
 
         nfp = m.submodules.nfp = NextFetchPredictor(self.p)
+        r_nfp_pc    = Signal(32, init=0x0000_0000)
+        r_nfp_valid = Signal(1, init=0)
 
-        r_pc = Signal(32, init=0x0000_0000)
-        r_predicted = Signal(1, init=0)
-
-        npc = Signal(32)
-        npc_predicted = Signal()
+        # Select which program counter value is sent to the FTQ.
+        sel_pc    = Signal(32)
+        sel_pred  = Signal(1)
+        sel_valid = Signal(1)
         with m.If(self.dbg.valid):
-            m.d.comb += npc.eq(self.dbg.pc)
-            m.d.comb += npc_predicted.eq(0)
+            m.d.comb += [
+                sel_pc.eq(self.dbg.pc),
+                sel_pred.eq(0),
+                sel_valid.eq(1),
+            ]
+        with m.Elif(r_nfp_valid):
+            m.d.comb += [
+                sel_pc.eq(r_nfp_pc),
+                sel_pred.eq(1),
+                sel_valid.eq(1),
+            ]
         with m.Else():
-            m.d.comb += npc.eq(r_pc)
-            m.d.comb += npc_predicted.eq(r_predicted)
+            m.d.comb += [
+                sel_pc.eq(0),
+                sel_pred.eq(0),
+                sel_valid.eq(0),
+            ]
 
+        # Send the selected program counter value to the NFP.
         m.d.comb += [
-            nfp.req.pc.eq(npc),
+            nfp.req.pc.eq(sel_pc),
+            nfp.req.valid.eq(sel_valid),
+        ]
+        # Output from the NFP is available on the next cycle
+        m.d.sync += [
+            r_nfp_pc.eq(nfp.resp.pc),
+            r_nfp_valid.eq(nfp.resp.valid),
         ]
 
-        # Output to the FTQ
+
+        # Capture the selected program counter value from this cycle
+        r_pc    = Signal(32, init=0x0000_0000)
+        r_pred  = Signal(init=0)
+        r_valid = Signal(init=0)
+        m.d.sync += [
+            r_pc.eq(sel_pc),
+            r_pred.eq(sel_pred),
+            r_valid.eq(sel_valid),
+        ]
+
+        # Send a request to the FTQ
         with m.If(self.ftq_sts.ready):
             m.d.sync += [
                 self.alloc_req.valid.eq(1),
-                self.alloc_req.vaddr.eq(npc),
+                self.alloc_req.vaddr.eq(sel_pc),
                 self.alloc_req.passthru.eq(1),
             ]
         with m.Else():
@@ -104,10 +111,38 @@ class ControlFlowController(Component):
                 self.alloc_req.passthru.eq(0),
             ]
 
-        with m.If(self.ftq_sts.ready):
-            m.d.sync += [
-                r_pc.eq(nfp.resp.npc),
-                r_predicted.eq(nfp.resp.npc),
-            ]
+
+        #npc = Signal(32)
+        #npc_predicted = Signal()
+        #with m.If(self.dbg.valid):
+        #    m.d.comb += npc.eq(self.dbg.pc)
+        #    m.d.comb += npc_predicted.eq(0)
+        #with m.Else():
+        #    m.d.comb += npc.eq(r_pc)
+        #    m.d.comb += npc_predicted.eq(r_predicted)
+
+        #m.d.comb += [
+        #    nfp.req.pc.eq(npc),
+        #]
+
+        ## Output to the FTQ
+        #with m.If(self.ftq_sts.ready):
+        #    m.d.sync += [
+        #        self.alloc_req.valid.eq(1),
+        #        self.alloc_req.vaddr.eq(npc),
+        #        self.alloc_req.passthru.eq(1),
+        #    ]
+        #with m.Else():
+        #    m.d.sync += [
+        #        self.alloc_req.valid.eq(0),
+        #        self.alloc_req.vaddr.eq(0),
+        #        self.alloc_req.passthru.eq(0),
+        #    ]
+
+        #with m.If(self.ftq_sts.ready):
+        #    m.d.sync += [
+        #        r_pc.eq(nfp.resp.npc),
+        #        r_predicted.eq(nfp.resp.npc),
+        #    ]
 
         return m
