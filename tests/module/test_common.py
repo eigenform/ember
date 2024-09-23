@@ -2,6 +2,7 @@
 import unittest
 import functools
 import operator
+import random
 
 from amaranth import *
 from amaranth.lib.wiring import *
@@ -15,6 +16,7 @@ from ember.sim.common import *
 from ember.common import *
 from ember.common.mem import *
 from ember.common.coding import *
+from ember.common.xbar import *
 
 class CommonUnitTests(unittest.TestCase):
     @staticmethod
@@ -168,6 +170,55 @@ class CommonUnitTests(unittest.TestCase):
             for x in range(32):
                 yield m1.i.eq(x)
                 self.assertEqual((yield m1.o), x.bit_count())
+
+
+    def test_simple_xbar(self):
+        dut = SimpleCrossbar(2, 2)
+
+        @self.simulate_comb(dut)
+        def _1():
+
+            yield dut.upstream_grant[0].eq(1)
+            yield dut.upstream_grant[1].eq(1)
+            yield dut.downstream_grant[0].eq(0)
+            yield dut.downstream_grant[1].eq(1)
+            s = yield dut.dst_idx[0]
+            v = yield dut.grant[0]
+            assert s == 1
+            assert v == 1
+            s = yield dut.dst_idx[1]
+            v = yield dut.grant[1]
+            assert s == 0
+            assert v == 0
+
+            yield dut.upstream_grant[0].eq(1)
+            yield dut.upstream_grant[1].eq(1)
+            yield dut.downstream_grant[0].eq(1)
+            yield dut.downstream_grant[1].eq(1)
+            s = yield dut.dst_idx[0]
+            v = yield dut.grant[0]
+            assert s == 0
+            assert v == 1
+            s = yield dut.dst_idx[1]
+            v = yield dut.grant[1]
+            assert s == 1
+            assert v == 1
+
+
+            yield dut.upstream_grant[0].eq(0)
+            yield dut.upstream_grant[1].eq(1)
+            yield dut.downstream_grant[0].eq(0)
+            yield dut.downstream_grant[1].eq(1)
+            s = yield dut.dst_idx[0]
+            v = yield dut.grant[0]
+            assert s == 0
+            assert v == 0
+            s = yield dut.dst_idx[1]
+            v = yield dut.grant[1]
+            assert s == 1
+            assert v == 1
+
+
 
 
 

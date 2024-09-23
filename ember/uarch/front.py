@@ -37,23 +37,20 @@ class FTQEntryState(Enum, shape=4):
         FTQ entry is empty
     PENDING:
         Request is eligible for service by the IFU
+    PROBE:
+        Request stalled for prefetch probe
     FETCH:
-        Request is moving through the IFU
+        Request stalled for demand fetch
     FILL:
         Request stalled for L1I miss
     XLAT:
         Request stalled for TLB miss
-    COMPLETE:
-        Request completed
-
     """
     NONE     = 0
-    PENDING  = 1
-    PREFETCH = 2
-    FETCH    = 3
-    FILL     = 4
-    XLAT     = 5
-    COMPLETE = 6
+    PROBE    = 1
+    FETCH    = 2
+    FILL     = 3
+    XLAT     = 4
 
 class FTQEntry(StructLayout):
     """ Layout of an entry in the Fetch Target Queue. 
@@ -64,8 +61,14 @@ class FTQEntry(StructLayout):
         Program counter value associated with this entry
     state:
         State associated with this entry
+    valid:
+        Indicates when an entry is valid
+    blocks:
+        Number of sequential fetch blocks
     prefetched:
         Indicates when an entry has been prefetched into the L1I cache
+    complete:
+        Indicates when an entry has been fetched from the L1I cache
     passthru:
         Indicates when the program counter value is a physical address
     id: 
@@ -76,7 +79,10 @@ class FTQEntry(StructLayout):
         super().__init__({
             "vaddr": param.vaddr,
             "state": FTQEntryState,
+            "blocks": unsigned(4),
+            "valid": unsigned(1),
             "prefetched": unsigned(1),
+            "complete": unsigned(1),
             "predicted": unsigned(1),
             "passthru": unsigned(1),
             "id": param.ftq.index_shape,
@@ -256,6 +262,7 @@ class PrefetchResponse(Signature):
             "valid": Out(1),
             "vaddr": Out(p.vaddr),
             "sts": Out(FetchResponseStatus),
+            "stall": Out(1),
             "ftq_idx": Out(p.ftq.index_shape),
         })
 

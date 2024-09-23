@@ -23,7 +23,7 @@ class PopCount(Elaboratable):
     def __init__(self, width):
         self.width = width
         self.i = Signal(width)
-        self.o = Signal(ceil_log2(width))
+        self.o = Signal(ceil_log2(width)+1)
     def elaborate(self, platform):
         m = Module()
         m.d.comb += [

@@ -170,7 +170,7 @@ def tb_l1icache_rw(dut: L1ICache):
 
 
 
-def tb_l1ifill(dut: L1IFillUnit):
+def tb_l1ifill(dut: NewL1IFillUnit):
     #log = logging.getLogger("tb_l1ifill")
     ram = FakeRam(0x0000_1000)
     ram.write_bytes(0, bytearray([i for i in range(1, 256)]))
@@ -180,9 +180,9 @@ def tb_l1ifill(dut: L1IFillUnit):
     ready = yield dut.sts.ready
     assert ready == 1
     
-    yield dut.req[0].addr.eq(0x0000_0000)
-    yield dut.req[0].way.eq(1)
-    yield dut.req[0].valid.eq(1)
+    yield dut.port[0].req.addr.eq(0x0000_0000)
+    yield dut.port[0].req.way.eq(1)
+    yield dut.port[0].req.valid.eq(1)
 
     ready = 0
     cyc = 0
@@ -190,9 +190,9 @@ def tb_l1ifill(dut: L1IFillUnit):
         if cyc >= 16:
             assert 1==0, f"timeout after {cyc} cycles"
         yield Tick()
-        yield dut.req[0].addr.eq(0x0000_0000)
-        yield dut.req[0].way.eq(0)
-        yield dut.req[0].valid.eq(0)
+        yield dut.port[0].req.addr.eq(0x0000_0000)
+        yield dut.port[0].req.way.eq(0)
+        yield dut.port[0].req.valid.eq(0)
         yield from ram.run(dut.fakeram[0].req, dut.fakeram[0].resp)
         ready = yield dut.sts.ready
         cyc += 1
@@ -235,7 +235,7 @@ class L1ICacheTests(unittest.TestCase):
 
     def test_l1ifill(self):
         tb = Testbench(
-            L1IFillUnit(EmberParams()),
+            NewL1IFillUnit(EmberParams()),
             tb_l1ifill,
             "tb_l1ifill"
         )

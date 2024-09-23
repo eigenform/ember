@@ -75,8 +75,8 @@ class NextFetchPredictor(Component):
 
         fblk_addr = self.req.pc.get_fetch_addr()
 
+        # Try to find the address in the L0 BTB
         l0_btb = m.submodules.l0_btb = L0BranchTargetBuffer(self.p)
-
         m.d.comb += [
             l0_btb.rp.req.pc.eq(self.req.pc),
             l0_btb.rp.req.valid.eq(self.req.valid),

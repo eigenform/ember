@@ -1,114 +1,220 @@
+.. include:: ../terms.rst
+
 Front-End
 =========
 
 In the front-end of the machine, the ultimate goal is to keep a continuous
-stream of [relevant] instruction bytes moving into the rest of the machine. 
-This involves:
+stream of [relevant] instruction bytes moving into the instruction pipeline.
+At a high-level, this involves the following:
 
-- Determining which instructions need to enter the pipeline
-- Prefetching instructions from remote memory into the L1I cache
-- Fetching instructions from the L1I cache and sending them down the pipeline
+- Determining where [in memory] the instruction stream will continue
+- Buffering requests to fetch instructions from somewhere in memory
+- Prefetching bytes from some remote memory into the L1I cache
+- Fetching instructions from the L1I cache
+- Buffering fetched instructions for service downstream in the pipeline
 
-Decoupling
-----------
+.. warning::
+   In modern computers, an L1I cache is typically supported by a hierarchy 
+   of larger memories that are further away from the core (ie. a mid-level
+   cache, a last-level cache, a DRAM device, etc). 
 
-Branch prediction and instruction fetch are decoupled by a 
-**fetch target queue** (FTQ) which controls interactions with the L1I cache. 
+   For now, we're simply *assuming* that the next level in the memory hierarchy
+   is actually robust enough to support all of this. 
+   At this point, we're only relying on intentionally-simplified *models* of 
+   memory beyond the first-level caches. 
 
+
+.. glossary::
+
+   Control-flow Request
+    A request to continue the instruction stream at some location in memory.
+
+   Cacheline
+    The smallest addressible piece of data in a cache.
+
+   Fetch Block
+    A block of one or more sequential cachelines. 
+
+   Fetch Target Queue
+    A queue used to track a control-flow request until they can be serviced
+    by instruction fetch. 
+
+   
+ 
 
 
 Control-flow Requests
 ---------------------
 
-Control-flow requests are *a program counter value* which indicates where the 
-front-end should fetch instruction bytes. 
-Each request will eventually produce an L1I cacheline (also called a "fetch 
-block") which is sent into the rest of the machine. 
+A **control-flow request** is an injunction to begin fetching instruction
+bytes at some location in memory where the instruction stream should continue. 
+Each request corresponds to a **fetch block**: a region in memory containing
+the next fragment of the instruction stream. This is defined by:
 
-The program counter value associated with a request has two components
-(assuming 32B L1I cachelines):
+- A program counter value, which gives the address of the first cacheline and 
+  the offset to the first relevant instruction within the cacheline
 
-- The upper 27 bits are the *fetch block address* which is used to identify a 
-  particular L1I cacheline
-- The low 5 bits are the *fetch offset* which identifies the first relevant
-  32-bit word within the cacheline; this is also called the "entry point"
-  into the block
+- A number of sequential cachelines proceeding the initial block
 
-Control-flow requests are generated from various places in the pipeline, 
+.. note::
+    Ideally, this also includes the offset of the last relevant instruction 
+    within in the last cacheline.
+
+This information is used to drive the front-end until the request is complete,
+or until the request is cancelled and replaced.
+
+A **control-flow control unit** (CFC) collects requests from different points
+in the machine and controls how they are inserted into the front-end. 
+Control-flow requests may be generated from various places in the pipeline, 
 and may either be **architectural** or **speculative**:
 
-- Requests from predecoded/predicted branches and jumps
-- Requests from recognizing an incorrect prediction
-- Requests from retired instructions
+- Speculative requests represent the *predicted* next fragment of the 
+  instruction stream. 
+
+- Architectural requests represent the next fragment of the instruction stream
+  where the first instruction is guaranteed to be architecturally correct. 
+  These must be serviced immediately, and must result in the entire pipeline 
+  being invalidated. 
+
+.. note::
+   A fetch block is related to [but distinct from] the idea of a "basic block,"
+   which comes up often in program analysis and compiler design. 
+
+   - A fetch block can contain multiple basic blocks if the implementation
+     can "squash" control-flow instructions that do not exit the fetch block
+
+   - A fetch block can correspond to a single basic block if the last 
+     instruction is the only control-flow instruction
+
+   - A fetch block can correspond to a fragment of a basic block in cases 
+     where the size of a basic block exceeds the size of a fetch block 
+     defined by the implementation
 
 
-A **control-flow control unit** (CFC) collects these and controls which 
-request[s] are allocated in the FTQ. Incoming requests are also subject to the 
-L0 predictors embedded within the CFC. 
+
+Decoupling
+----------
+
+A **fetch target queue** (FTQ) holds control-flow requests until they can be 
+serviced by the L1I cache. 
+
+When an FTQ entry becomes the oldest in the queue, it is used to control 
+the behavior of the demand fetch pipeline. This amounts to performing 
+sequential L1I cache accesses until the pipeline stalls, or until all 
+fetch blocks associated with the FTQ entry have been fetched successfully. 
+
+The prefetcher selects pending entries from the FTQ in an attempt to
+guarantee that the associated line is resident in the L1I cache 
+before they reach the top of the queue. 
+
+Misses in the L1I cache incur latency and inject bubbles downstream into the 
+pipeline. In order to mitigate this, the front-end of the machine is 
+allowed to "run ahead" of the rest of the pipeline in an attempt to 
+pre-emptively fill the L1I cache with relevant bytes.
+
+In principle, this is accomplished by taking advantage of the following facts:
+
+- We can often pre-emptively compute the targets of control-flow instructions 
+  shortly after retrieving them from memory (ie. in cases where the target can 
+  be computed by adding the program counter to an immediate value)
+
+- We can often predict the outcomes and/or targets of control-flow instructions
+  ahead of time with reasonable accuracy
+
+- We can pre-emptively start moving ("prefetching") bytes from memory into the 
+  L1I cache as soon as the target of a control-flow instruction is known
+
+.. note::
+    This strategy is called "fetch-directed prefetching" (FDP).
+
+L1 Instruction Cache
+--------------------
+
+All instruction bytes entering the midcore/back-end are fetched from the 
+L1I cache. 
+
+Organization
+^^^^^^^^^^^^
+
+The L1I cache is set-associative, and organized into two arrays:
+
+- An array of tags (N sets, M ways per set, one tag per way)
+- An array of cachelines (N sets, M ways per set, one cacheline per way)
+
+The L1I cache is used in the "virtually-indexed and physically-tagged" (VIPT)
+scheme. In a VIPT cache, address translation is not required to select a set.
+However, the physical address must still be resolved in order to determine the 
+existence of a matching way in the set. 
+
+In general, accesses on the L1I cache take the following form: 
+
+1. Start with a virtual address 
+2. Resolve the physical address for the given virtual address
+3. Compute a set index using the virtual address bits
+4. Compute a tag using the physical address bits
+5. Use the set index to read tags/data for all ways in a particular set
+6. The way with the matching tag contains the cached data for the given 
+   virtual address
+
+Replacement Policy
+^^^^^^^^^^^^^^^^^^
+
+For now, the replacement policy is random. When an L1I cache write port is
+used to write into a set, an LFSR randomly selects a way in the set that
+will be replaced. 
+
+Address Translation
+^^^^^^^^^^^^^^^^^^^
+
+In an attempt to avoid the latency associated with address translation in 
+VIPT schemes, a translation lookaside buffer (TLB) is typically accessed in 
+parallel with L1I cache data and tags. The TLB is a small, fully-associative 
+memory that stores recently-observed page table entries. 
+
+In the best case, a TLB hit allows tag matching to proceed immediately.
+Otherwise, when a TLB miss occurs, we must wait for address translation.
 
 
+Demand Fetch Pipeline
+---------------------
 
+The **demand fetch pipeline** used to retrieve data from the cache and send
+it down the rest of the instruction pipeline. 
 
+A **demand fetch request** indicates that the pipeline should begin reading 
+a fetch block (consisting of one or more sequential cachelines).
+This occurs when an FTQ entry becomes the oldest in the queue. 
 
-Architectural Requests
-^^^^^^^^^^^^^^^^^^^^^^
+Internally, each demand request yields one or more **fetch block requests**
+which are passed down the pipeline [to the L1I cache] on proceeding cycles.
 
-Architectural control-flow requests occur when: 
+- Stage 0. Setup
 
-1. All instructions in a previously-fetched block (containing no control-flow 
-   instructions) have retired. The next program counter *must* be the address of 
-   the next-sequential fetch block. 
+  - When the pipeline is idle, accept a new demand request and send the 
+    first request to stage 1
+  - When the demand request is complete, change to the idle state
+  - When the pipeline is running, increment the virtual address and 
+    send the next request to stage 1
+  - When stage 2 is stalled, wait for a response from the L1I fill unit
+    before continuing the transaction
 
-2. A control-flow instruction has retired. The next program counter *must* be
-   the address of the resolved target address for the instruction. 
+- Stage 1. L1I/TLB Access
 
-3. A branch misprediction has been recognized. The next program counter *must* 
-   be the address of the resolved target address for the predicted branch. 
+  - Access the TLB and send the results to stage 2
+  - Access the L1I data array and send the results to stage 2
+  - Access the L1I tag array and send the results to stage 2
 
-Speculative Requests
-^^^^^^^^^^^^^^^^^^^^
+- Stage 2. Way select
 
-Speculative control-flow requests occur when: 
+  - If a TLB miss occurs, send a request to TLB fill/PTW and stall
+  - If a tag miss occurs, send a request to the L1I fill unit and stall
+  - If a tag hit occurs, send the result to predecode and the 
+    decode buffer
 
-1. A predecoded fetch block has no control-flow instructions. The next program
-   counter is predicted to be the address of the next-sequential fetch block. 
-
-2. A predecoded fetch block has one or more control-flow instructions. 
-   The next program counter is the predicted target address for the instruction.
-
-
-Instruction Fetch
+Prefetch Pipeline
 -----------------
 
-
-Control-flow requests are queued up by a **fetch target queue** (FTQ). 
-The FTQ controls two pipes that are used to interact with the L1I cache: 
-
-- The "instruction fetch pipe" dedicated to "demand" fetch requests 
-  (the oldest entry in the FTQ)
-- The "instruction prefetch pipe" dedicated to prefetch requests
-
-
-The L1I cache is virtually-indexed and physically-tagged. 
-In both pipelines, interactions with the L1I cache are completed and respond 
-back to the FTQ after two cycles:
-
-1. The address is sent to the L1I TLB and the L1I cache data/tag arrays
-2. A matching tag selects the hitting way; otherwise, a miss condition 
-   generates a request to either the PTW or the L1I fill unit which is 
-   valid on the next cycle. The status is reported back to the FTQ. 
-
-An L1I cache hit is sent to the decode queue and the predecoders in parallel. 
-On a miss condition, the fetch pipe sets up requests to either the PTW or the
-L1I fill unit and reports this to the FTQ. The FTQ entry associated with the 
-request is parked and waits for a matching response from either the PTW or 
-L1I fill unit before being replayed. 
-
-
-.. figure:: ../_static/diagram/fetch-pipeline.svg
-   :class: with-border
-
-   The instruction fetch pipeline
+TODO
 
 
 Branch Prediction
@@ -138,46 +244,6 @@ Control-flow is predicted in three fundamentally different but related ways:
 2. We can predict *the direction* of a conditional branch instruction. 
 
 3. We can predict *the target address* of a control-flow instruction. 
-
-Predecoding
-^^^^^^^^^^^
-
-The predecoders identify control-flow instructions and extract immediates from 
-words in a successful L1I cache hit. Each predecoder has a full 32-bit adder 
-which computes the target addresses for direct branch and jump instructions. 
-The predecode unit sends this information to the branch prediction unit. 
-
-Predecoding allows us the following: 
-
-1. We can discover unconditionally-taken control-flow instructions (and their 
-   target addresses) immediately after a cacheline has been fetched. 
-   This allows us to quickly obtain the next cacheline that must be fetched. 
-
-2. We can discover conditional control-flow instructions immediately after
-   a cacheline has been fetched. This allows us to begin predicting the
-   branch direction early in the pipeline. 
-
-
-The next-sequential fetch block can be predicted when the following conditions
-are met (and ideally, recognized as early as possible in the pipeline):
-
-- There are no control-flow instructions in the predecoded block
-- There are no serializing instructions in the predecoded block
-- There are no illegal instructions in the predecoded block
-
-When a predecoded fetch block has a single control-flow instruction, the data
-is sent to the appropriate predictor: 
-
-- Since the target addresses of unconditional direct jumps/calls are computed 
-  by predecoders, the target address can be used without additional latency 
-- Conditional branches are sent to the appropriate direction predictor
-- Indirect jumps/calls are sent to the appropriate target predictor
-
-
-.. note::
-    When a predecoded fetch block contains more than one control-flow 
-    instruction, we need to make a decision about which instruction should 
-    be used to predict control-flow. 
 
 L0 Predictions
 ^^^^^^^^^^^^^^
@@ -234,6 +300,58 @@ accesses that will complete within a single cycle.
        
     3. Invoke the appropriate L0 predictor
     4. If no instruction is predicted-taken, predict the next-sequential block
+
+
+Instruction Predecode
+---------------------
+
+The predecoders identify control-flow instructions and extract immediates from 
+words shortly after a block has been prefetched into the L1I cache. 
+
+Each predecoder has a full 32-bit adder which computes the target addresses 
+for direct branch and jump instructions. 
+
+
+
+The predecode unit sends this information to the branch prediction unit, 
+where it can be used to generate
+
+
+Predecoding allows us the following: 
+
+1. We can discover unconditionally-taken control-flow instructions (and their 
+   target addresses) immediately after a cacheline has been fetched. 
+   This allows us to quickly obtain the next cacheline that must be fetched. 
+
+2. We can discover conditional control-flow instructions immediately after
+   a cacheline has been fetched. This allows us to begin predicting the
+   branch direction early in the pipeline. 
+
+.. note::
+   Ideally, predecoding occurs immediately after prefetching. 
+
+
+
+The next-sequential fetch block can be predicted when the following conditions
+are met (and ideally, recognized as early as possible in the pipeline):
+
+- There are no control-flow instructions in the predecoded block
+- There are no serializing instructions in the predecoded block
+- There are no illegal instructions in the predecoded block
+
+When a predecoded fetch block has a single control-flow instruction, the data
+is sent to the appropriate predictor: 
+
+- Since the target addresses of unconditional direct jumps/calls are computed 
+  by predecoders, the target address can be used without additional latency 
+- Conditional branches are sent to the appropriate direction predictor
+- Indirect jumps/calls are sent to the appropriate target predictor
+
+
+.. note::
+    When a predecoded fetch block contains more than one control-flow 
+    instruction, we need to make a decision about which instruction should 
+    be used to predict control-flow. 
 
 
 

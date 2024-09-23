@@ -71,7 +71,7 @@ class FetchUnit(Component):
             "l1i_rp": Out(L1ICacheReadPort(param)),
             "tlb_rp": Out(L1ICacheTLBReadPort()),
 
-            "ifill_req": Out(L1IFillRequest(param)),
+            "ifill_req": Out(L1IFillPort.Request(param)),
             "ifill_sts": In(L1IFillStatus(param)),
 
             "pd_req": Out(PredecodeRequest(param)),
@@ -131,8 +131,9 @@ class FetchUnit(Component):
 
         3. If a matching cache way is found, respond with the hitting line. 
            If no match occurs, send a request to the L1I fill interface. 
-           The way index is selected with an LFSR. 
-
+           
+        NOTE: The way index is allocated *here* with an LFSR and sent to the 
+        L1I fill unit. 
         """
 
         m.submodules.lfsr = lfsr = EnableInserter(C(1,1))(self.lfsr)
@@ -142,6 +143,8 @@ class FetchUnit(Component):
             self.l1i_rp.resp.line_data[way_idx]
             for way_idx in range(self.p.l1i.num_ways)
         )
+
+        ifill_ready = self.ifill_sts.ready
 
         vaddr    = self.stage[1].vaddr
         stage_ok = self.stage[1].valid
@@ -187,17 +190,31 @@ class FetchUnit(Component):
         ]
 
         # Inputs to the L1I fill unit
+        # 
+        # FIXME: Stall this pipe for L1I fill unit availability? 
         paddr_sel = Mux(self.stage[1].passthru, 
             vaddr, 
             resolved_paddr,
         )
         ifill_req_valid = (sts == FetchResponseStatus.L1_MISS)
+
+        # Drive defaults for fill unit request
         m.d.sync += [
-            self.ifill_req.valid.eq(ifill_req_valid),
-            self.ifill_req.addr.eq(paddr_sel),
-            self.ifill_req.way.eq(self.lfsr.value),
-            self.ifill_req.ftq_idx.eq(ftq_idx),
+            self.ifill_req.valid.eq(0),
+            self.ifill_req.addr.eq(0),
+            self.ifill_req.way.eq(0),
+            self.ifill_req.ftq_idx.eq(0),
+            self.ifill_req.src.eq(L1IFillSource.NONE),
         ]
+
+        with m.If(ifill_req_valid & ifill_ready):
+            m.d.sync += [
+                self.ifill_req.valid.eq(ifill_req_valid),
+                self.ifill_req.addr.eq(paddr_sel),
+                #self.ifill_req.way.eq(self.lfsr.value),
+                self.ifill_req.ftq_idx.eq(ftq_idx),
+                self.ifill_req.src.eq(L1IFillSource.DEMAND),
+            ]
 
         # FIXME: Inputs to the PTW
         m.d.sync += [
@@ -220,6 +237,13 @@ class FetchUnit(Component):
             self.result.ftq_idx.eq(Mux(hit_valid, ftq_idx, 0)),
             self.result.data.eq(tag_line),
         ]
+        with m.If(hit_valid):
+            cl = Signal(L1ICacheline(self.p))
+            m.d.comb += cl.eq(tag_line)
+            m.d.sync += Print(Format(
+                "L1I Hit {:08x}: {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x}", 
+                vaddr.bits, cl[0], cl[1], cl[2], cl[3], cl[4], cl[5], cl[6], cl[7],
+            ))
 
         # FTQ response
         m.d.sync += [
@@ -234,5 +258,8 @@ class FetchUnit(Component):
         self.elaborate_s0(m)
         self.elaborate_s1(m)
         return m
+
+
+
 
 

@@ -20,12 +20,27 @@ class ControlFlowRequest(Signature):
 
 
 class ControlFlowController(Component):
-    """ Collects control-flow requests from different parts of the machine 
-    and sends them to the FTQ. 
+    """ Collects control-flow requests from different parts of the machine and 
+    sends them to the FTQ. 
 
     .. note:
         This is mostly temporary [hacky] logic until we figure out exactly how 
         we want to handle things.
+
+    There should be three different cases we need to handle:
+
+    1. We are receiving a valid architectural CFR. 
+    2. We are receiving a valid speculative CFR from somewhere in the 
+       branch prediction pipeline.
+    3. We are generating a speculative CFR with output from the next-fetch
+       predictor. 
+
+    There should also be three different cases for allocating an FTQ entry:
+
+    1. If we've received an architectural CFR, allocate for it
+    2. If we've received a speculative CFR, allocate for it
+    3. If the next-fetch predictor output from the previous cycle is 
+       valid, allocate for it. 
 
     Ports
     =====
@@ -52,27 +67,33 @@ class ControlFlowController(Component):
         r_nfp_pc    = Signal(32, init=0x0000_0000)
         r_nfp_valid = Signal(1, init=0)
 
-        # Select which program counter value is sent to the FTQ.
+        # These wires are used to build an FTQ allocation request
         sel_pc    = Signal(32)
         sel_pred  = Signal(1)
         sel_valid = Signal(1)
+        sel_passthru = Signal(1)
+        m.d.comb += [
+            sel_pc.eq(0),
+            sel_pred.eq(0),
+            sel_valid.eq(0),
+            sel_passthru.eq(0),
+        ]
+
+        # Case 1. If the NFP output from the previous cycle is valid
+        with m.If(r_nfp_valid):
+            m.d.comb += [
+                sel_pc.eq(r_nfp_pc),
+                sel_pred.eq(1),
+                sel_valid.eq(1),
+                sel_passthru.eq(1),
+            ]
+        # Case 2. We're receiving an architectural CFR
         with m.If(self.dbg.valid):
             m.d.comb += [
                 sel_pc.eq(self.dbg.pc),
                 sel_pred.eq(0),
                 sel_valid.eq(1),
-            ]
-        with m.Elif(r_nfp_valid):
-            m.d.comb += [
-                sel_pc.eq(r_nfp_pc),
-                sel_pred.eq(1),
-                sel_valid.eq(1),
-            ]
-        with m.Else():
-            m.d.comb += [
-                sel_pc.eq(0),
-                sel_pred.eq(0),
-                sel_valid.eq(0),
+                sel_passthru.eq(1),
             ]
 
         # Send the selected program counter value to the NFP.
@@ -86,8 +107,8 @@ class ControlFlowController(Component):
             r_nfp_valid.eq(nfp.resp.valid),
         ]
 
-
-        # Capture the selected program counter value from this cycle
+        # Capture the selected program counter value from this cycle.
+        # These registers hold information from the previous CFR.
         r_pc    = Signal(32, init=0x0000_0000)
         r_pred  = Signal(init=0)
         r_valid = Signal(init=0)
@@ -100,9 +121,9 @@ class ControlFlowController(Component):
         # Send a request to the FTQ
         with m.If(self.ftq_sts.ready):
             m.d.sync += [
-                self.alloc_req.valid.eq(1),
+                self.alloc_req.valid.eq(sel_valid),
                 self.alloc_req.vaddr.eq(sel_pc),
-                self.alloc_req.passthru.eq(1),
+                self.alloc_req.passthru.eq(sel_passthru),
             ]
         with m.Else():
             m.d.sync += [
@@ -110,39 +131,5 @@ class ControlFlowController(Component):
                 self.alloc_req.vaddr.eq(0),
                 self.alloc_req.passthru.eq(0),
             ]
-
-
-        #npc = Signal(32)
-        #npc_predicted = Signal()
-        #with m.If(self.dbg.valid):
-        #    m.d.comb += npc.eq(self.dbg.pc)
-        #    m.d.comb += npc_predicted.eq(0)
-        #with m.Else():
-        #    m.d.comb += npc.eq(r_pc)
-        #    m.d.comb += npc_predicted.eq(r_predicted)
-
-        #m.d.comb += [
-        #    nfp.req.pc.eq(npc),
-        #]
-
-        ## Output to the FTQ
-        #with m.If(self.ftq_sts.ready):
-        #    m.d.sync += [
-        #        self.alloc_req.valid.eq(1),
-        #        self.alloc_req.vaddr.eq(npc),
-        #        self.alloc_req.passthru.eq(1),
-        #    ]
-        #with m.Else():
-        #    m.d.sync += [
-        #        self.alloc_req.valid.eq(0),
-        #        self.alloc_req.vaddr.eq(0),
-        #        self.alloc_req.passthru.eq(0),
-        #    ]
-
-        #with m.If(self.ftq_sts.ready):
-        #    m.d.sync += [
-        #        r_pc.eq(nfp.resp.npc),
-        #        r_predicted.eq(nfp.resp.npc),
-        #    ]
 
         return m

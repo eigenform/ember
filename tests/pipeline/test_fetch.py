@@ -72,7 +72,12 @@ def tb_fetch_miss2hit(dut: EmberFrontend):
     #    data_hit.append(d)
     #assert data_hit == data_miss2hit
 
-    yield from clk.step()
+    # Temporary~
+    for _ in range(32):
+        yield from clk.step()
+        yield from ram.run(dut.fakeram[0].req, dut.fakeram[0].resp)
+        yield from ram.run(dut.fakeram[1].req, dut.fakeram[1].resp, pipe=1)
+
 
     clk.print_events()
 

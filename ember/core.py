@@ -60,7 +60,8 @@ class EmberFrontend(Component):
         ifu   = m.submodules.ifu   = FetchUnit(self.p)
         l1i   = m.submodules.l1i   = L1ICache(self.p)
         itlb  = m.submodules.itlb  = L1ICacheTLB(self.p)
-        ifill = m.submodules.ifill = L1IFillUnit(self.p)
+        #ifill = m.submodules.ifill = L1IFillUnit(self.p)
+        ifill = m.submodules.ifill = NewL1IFillUnit(self.p)
         pfu   = m.submodules.pfu   = L1IPrefetchUnit(self.p)
         pdu   = m.submodules.pdu   = PredecodeUnit(self.p)
 
@@ -73,7 +74,7 @@ class EmberFrontend(Component):
         # IFU connections
         connect(m, ifu.l1i_rp, l1i.rp[0])
         connect(m, ifu.tlb_rp, itlb.rp)
-        connect(m, ifu.ifill_req, ifill.req[0])
+        connect(m, ifu.ifill_req, ifill.port[0].req)
         connect(m, ifu.ifill_sts, ifill.sts)
         connect(m, ifu.pd_req, pdu.req)
         connect(m, ifu.resp, flipped(self.dbg_fetch_resp))
@@ -97,8 +98,12 @@ class EmberFrontend(Component):
         # PFU connections
         connect(m, pfu.l1i_pp, l1i.pp[0])
         connect(m, pfu.tlb_pp, itlb.pp)
-        connect(m, pfu.ifill_req, ifill.req[1])
+        connect(m, pfu.ifill_req, ifill.port[1].req)
         connect(m, pfu.ifill_sts, ifill.sts)
+
+        # IFU connections
+        connect(m, ifill.port[0].resp, ftq.ifill_resp[0])
+        connect(m, ifill.port[1].resp, ftq.ifill_resp[1])
 
         # FTQ connections
         connect(m, ftq.fetch_req, ifu.req)
@@ -106,8 +111,6 @@ class EmberFrontend(Component):
         connect(m, ftq.prefetch_req, pfu.req)
         connect(m, ftq.prefetch_resp, pfu.resp)
         connect(m, ftq.prefetch_sts, pfu.sts)
-        connect(m, ftq.ifill_resp[0], ifill.resp[0])
-        connect(m, ftq.ifill_resp[1], ifill.resp[1])
 
         # IFILL connections
         connect(m, ifill.l1i_wp[0], l1i.wp[0])

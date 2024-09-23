@@ -19,8 +19,9 @@ class L1ICacheTLBParams(object):
         #self.tag_shape  = VirtualPageNumberSv32()
 
 class L1IFillParams(object):
-    def __init__(self, num_mshr: int, **kwargs):
+    def __init__(self, num_mshr: int, num_port: int, **kwargs):
         self.num_mshr = num_mshr
+        self.num_port = num_mshr
 
 
 class L1ICacheParams(object):
@@ -84,6 +85,7 @@ class L1ICacheParams(object):
         # L1I fill parameters
         self.fill = L1IFillParams(
             num_mshr=2,
+            num_port=2,
         )
 
 

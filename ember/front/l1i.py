@@ -10,6 +10,7 @@ from amaranth_soc.wishbone import Interface as WishboneInterface
 from amaranth_soc.wishbone import Signature as WishboneSignature
 
 from ember.common import *
+from ember.common.lfsr import *
 from ember.front.l1i_array import *
 from ember.riscv.paging import *
 from ember.param import *
@@ -97,17 +98,33 @@ class L1ICache(Component):
     """ Backing memory for an L1 instruction cache.
 
     This module consists of a data array and a tag array. 
-    This only implements the *storage* for a [set-associative] 
-    virtually-indexed and physically-tagged (VIPT) cache. 
-    It does not include any of the logic for tag matching. 
+    This only implements the *storage* for a set-associative cache.
+
+    .. note::
+        I'm assuming that we're using this to implement a virtually-indexed 
+        and physically-tagged (VIPT) cache. This module does not include any 
+        of the logic for tag matching, and does not include any of the logic 
+        for address translation. 
 
     Read ports are used to read the tags and data for a particular set 
     *across all ways* in the cache. 
     Write ports are used to replace the tag and data for a particular set and
     a particular way. 
 
-    Probe ports are read ports [dedicated to prefetch logic] that yield tags 
-    for a particular set across all ways.
+    Probe ports are read ports that yield only the tags [without data] for a 
+    particular set across all ways.
+
+    .. note:: 
+        The probe ports are supposed to support cases like instruction 
+        prefetch, where we only want to determine whether or not a matching
+        cacheline exists (and needs to be filled sometime in the future). 
+
+    Replacement
+    -----------
+
+    The current replacement policy is *random*. 
+    Each write port in this module is associated to an LFSR which generates 
+    the way index used to write into the data/tag arrays. 
 
     Ports 
     =====
@@ -135,8 +152,19 @@ class L1ICache(Component):
     def elaborate(self, platform):
         m = Module()
 
+        # Data and tag arrays
         data_arr = m.submodules.data_arr = L1ICacheDataArray(self.p)
         tag_arr  = m.submodules.tag_arr  = L1ICacheTagArray(self.p)
+
+        # Create an LFSR for each write port. 
+        # NOTE: The replacement policy is random. 
+        lfsr_wp = [ 
+            EnableInserter(self.wp[idx].req.valid)(LFSR(degree=4))
+            for idx in range(self.num_wp) 
+        ]
+        for idx in range(self.num_wp):
+            m.submodules[f"lfsr_wp{idx}"] = lfsr = lfsr_wp[idx]
+
 
         # Outputs for the current request are valid on the next cycle
         for idx in range(self.num_rp):
@@ -162,16 +190,17 @@ class L1ICache(Component):
                 tag_arr.pp[idx].req.set.eq(self.pp[idx].req.set),
             ]
 
+        
         # Write port inputs
         for idx in range(self.num_wp):
             m.d.comb += [
                 data_arr.wp[idx].req.valid.eq(self.wp[idx].req.valid),
-                data_arr.wp[idx].req.way.eq(self.wp[idx].req.way),
+                data_arr.wp[idx].req.way.eq(lfsr_wp[idx].value),
                 data_arr.wp[idx].req.idx.eq(self.wp[idx].req.set),
                 data_arr.wp[idx].req.data.eq(self.wp[idx].req.line_data),
 
                 tag_arr.wp[idx].req.valid.eq(self.wp[idx].req.valid),
-                tag_arr.wp[idx].req.way.eq(self.wp[idx].req.way),
+                tag_arr.wp[idx].req.way.eq(lfsr_wp[idx].value),
                 tag_arr.wp[idx].req.idx.eq(self.wp[idx].req.set),
                 tag_arr.wp[idx].req.data.eq(self.wp[idx].req.tag_data),
             ]
