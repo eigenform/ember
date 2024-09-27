@@ -185,8 +185,6 @@ class L1IMissStatusHoldingRegister(Component):
         signature = Signature({
             "ready": Out(1),
             "complete": In(1),
-            #"req": In(L1IFillRequest(param)),
-            #"resp": Out(L1IFillResponse(param)),
             "port": In(L1IFillPort(param)),
             "l1i_wp": Out(L1ICacheWritePort(param)),
             "fakeram": Out(FakeRamInterface(param.l1i.line_depth)),
@@ -301,7 +299,7 @@ class L1IMissStatusHoldingRegister(Component):
                 self.l1i_wp.req.set.eq(self.stage[3].addr.l1i.set),
                 self.l1i_wp.req.way.eq(self.r_way),
                 self.l1i_wp.req.line_data.eq(self.stage[3].data),
-                self.l1i_wp.req.tag_data.eq(self.stage[3].addr.sv32.ppn),
+                self.l1i_wp.req.tag_data.ppn.eq(self.stage[3].addr.sv32.ppn),
                 self.l1i_wp.req.tag_data.valid.eq(1),
             ]
 
