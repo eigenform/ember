@@ -126,6 +126,7 @@ class L1IPrefetchUnit(Component):
             self.ifill_req.addr.eq(0),
             self.ifill_req.way.eq(0),
             self.ifill_req.ftq_idx.eq(0),
+            self.ifill_req.blocks.eq(0),
             self.ifill_req.src.eq(L1IFillSource.NONE),
         ]
 
@@ -194,6 +195,7 @@ class L1IPrefetchUnit(Component):
             m.d.sync += [
                 self.ifill_req.valid.eq(ifill_req_valid),
                 self.ifill_req.addr.eq(paddr_sel),
+                self.ifill_req.blocks.eq(1),
                 #self.ifill_req.way.eq(lfsr.value),
                 self.ifill_req.ftq_idx.eq(self.stage[1].ftq_idx),
                 self.ifill_req.src.eq(L1IFillSource.PREFETCH),

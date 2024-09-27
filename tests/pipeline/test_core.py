@@ -41,11 +41,10 @@ def tb_core_simple(dut: EmberCore):
 
 
 class EmberCoreTests(unittest.TestCase):
-    #def test_fetch_elab(self):
-    #    #m = FetchUnit(EmberParams())
-    #    m = EmberFrontend(EmberParams())
-    #    with open("/tmp/EmberFrontend.v", "w") as f:
-    #        f.write(verilog.convert(m, emit_src=False, name="EmberFrontend"))
+    #def test_core_elab(self):
+    #    m = EmberCore(EmberParams())
+    #    with open("/tmp/EmberCore.v", "w") as f:
+    #        f.write(verilog.convert(m, emit_src=False, name="EmberCore"))
 
     def test_core_simple(self):
         tb = Testbench(

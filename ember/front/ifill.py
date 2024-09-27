@@ -9,6 +9,7 @@ from amaranth_soc.wishbone import Interface as WishboneInterface
 from amaranth_soc.wishbone import Signature as WishboneSignature
 
 from ember.common import *
+from ember.common.pipeline import *
 from ember.common.xbar import SimpleCrossbar
 from ember.common.coding import EmberPriorityEncoder, ChainedPriorityEncoder
 from ember.riscv.paging import *
@@ -16,19 +17,6 @@ from ember.param import *
 from ember.front.l1i import L1ICacheWritePort
 from ember.uarch.front import *
 from ember.sim.fakeram import *
-
-
-class L1IFillRecord(StructLayout):
-    def __init__(self, p: EmberParams):
-        super().__init__({
-            "addr": p.vaddr,
-            # Source FTQ index 
-            "ftq_idx": p.ftq.index_shape,
-            # Number of 32-byte blocks
-            "blocks": unsigned(ceil_log2(4)),
-            # Way hints for each block
-            "ways": ArrayLayout(ceil_log2(p.l1i.num_ways), 4),
-        })
 
 class L1IFillSource(Enum, shape=2):
     NONE     = 0
@@ -69,6 +57,7 @@ class L1IFillPort(Signature):
             super().__init__({
                 "valid": Out(1),
                 "addr": Out(p.paddr),
+                "blocks": Out(4),
                 "way": Out(ceil_log2(p.l1i.num_ways)),
                 "ftq_idx": Out(p.ftq.index_shape),
                 "src": Out(L1IFillSource)
@@ -115,19 +104,13 @@ class L1IMshrState(Enum, shape=2):
 
     Values
     ======
-    NONE:
+    IDLE:
         No request is being serviced.
-    ACCESS:
-        The request is being serviced by a remote memory device.
-    WRITEBACK:
-        The request data is available and being written back to the L1I
-    COMPLETE:
-        The request has been completed and is waiting to be released. 
+    RUN:
+        The request is being serviced.
     """
-    NONE      = 0
-    ACCESS    = 1
-    WRITEBACK = 2
-    COMPLETE  = 3 
+    IDLE  = 0
+    RUN   = 1
 
 
 class L1IMissStatusHoldingRegister(Component):
@@ -166,6 +149,39 @@ class L1IMissStatusHoldingRegister(Component):
     """
     def __init__(self, param: EmberParams):
         self.p = param
+        self.stage = PipelineStages()
+
+        self.r_state     = Signal(L1IMshrState, init=L1IMshrState.IDLE)
+        self.r_busy      = Signal(init=0)
+        self.r_base_addr = Signal(self.p.paddr)
+        self.r_ftq_idx   = Signal(self.p.ftq.index_shape)
+        self.r_way       = Signal(ceil_log2(self.p.l1i.num_ways))
+        self.r_blocks    = Signal(4)
+        self.r_src       = Signal(L1IFillSource)
+        self.r_blk  = Signal(4)
+        self.r_addr = Signal(self.p.paddr)
+
+
+        # Memory access
+        self.stage.add_stage(1, {
+            "addr": self.p.paddr,
+            "blk": unsigned(4),
+        })
+
+        # Memory response
+        self.stage.add_stage(2, {
+            "addr": self.p.paddr,
+            "blk": unsigned(4),
+        })
+
+        # L1I writeback
+        self.stage.add_stage(3, {
+            "addr": self.p.paddr,
+            "blk": unsigned(4),
+            "data": ArrayLayout(unsigned(32), param.l1i.line_depth),
+        })
+
+
         signature = Signature({
             "ready": Out(1),
             "complete": In(1),
@@ -178,93 +194,142 @@ class L1IMissStatusHoldingRegister(Component):
         super().__init__(signature)
         return
 
-    def elaborate(self, platform):
-        m = Module()
+    def elaborate_s0(self, m: Module):
+        m.d.comb += self.ready.eq(self.r_state == L1IMshrState.IDLE)
 
-        state   = Signal(L1IMshrState, init=L1IMshrState.NONE)
-        addr    = Signal(self.p.paddr)
-        way     = Signal(ceil_log2(self.p.l1i.num_ways))
-        ftq_idx = Signal(self.p.ftq.index_shape)
-        src     = Signal(L1IFillSource)
-        data    = Signal(L1ICacheline(self.p))
-
-        r_ready = Signal(init=1)
-        r_addr  = Signal(self.p.paddr)
-        r_block = Signal(4)
-
-        m.d.comb += self.ready.eq(r_ready)
-
-        # Drive defaults
         m.d.sync += [
-           self.port.resp.valid.eq(0),
-           self.port.resp.ftq_idx.eq(0),
-           self.port.resp.way.eq(way),
-           self.port.resp.src.eq(L1IFillSource.NONE),
+            self.port.resp.valid.eq(0),
+            self.port.resp.ftq_idx.eq(0),
+            self.port.resp.way.eq(0),
+            self.port.resp.src.eq(0),
         ]
 
-
-        with m.Switch(state):
-
-            # Idle state.
-            # When we get a request, setup to start access on the next cycle.
-            with m.Case(L1IMshrState.NONE):
+        with m.Switch(self.r_state):
+            with m.Case(L1IMshrState.IDLE):
                 with m.If(self.port.req.valid):
                     m.d.sync += [
-                        state.eq(L1IMshrState.ACCESS),
-                        r_ready.eq(0),
-                        addr.eq(self.port.req.addr),
-                        way.eq(self.port.req.way),
-                        ftq_idx.eq(self.port.req.ftq_idx),
-                        src.eq(self.port.req.src),
+                        Assert(self.port.req.blocks != 0),
+                        self.r_state.eq(L1IMshrState.RUN),
+                        self.r_busy.eq(1),
+                        self.r_base_addr.eq(self.port.req.addr),
+                        self.r_ftq_idx.eq(self.port.req.ftq_idx),
+                        self.r_way.eq(self.port.req.way),
+                        self.r_blocks.eq(self.port.req.blocks),
+                        self.r_src.eq(self.port.req.src),
+
+                        self.r_blk.eq(1),
+                        self.r_addr.eq(self.port.req.addr),
+
+                        self.stage[1].addr.eq(self.port.req.addr),
+                        self.stage[1].blk.eq(1),
+                        self.stage[1].valid.eq(1),
                     ]
-
-            # Interact with a memory device until we have a response.
-            # When we get a response [after *at least* one cycle], setup for 
-            # L1I writeback on the next cycle.
-            with m.Case(L1IMshrState.ACCESS):
-                m.d.comb += [
-                    self.fakeram.req.addr.eq(addr),
-                    self.fakeram.req.valid.eq(1),
-                ]
-                with m.If(self.fakeram.resp.valid):
-                    m.d.sync += [
-                        state.eq(L1IMshrState.WRITEBACK),
-                        data.eq(Cat(*self.fakeram.resp.data)),
-
-                        # NOTE: Drive ready one cycle early?
-                        r_ready.eq(1),
-                    ]
-
-            # Write the response data back to the L1I cache.
-            #
-            # NOTE: Is there any reason why we might want to *wait* a cycle
-            # for the response from the L1I write port, or is it okay for us 
-            # to just reply and cleanup this MSHR immediately? 
-            with m.Case(L1IMshrState.WRITEBACK):
-                m.d.comb += [
-                    self.l1i_wp.req.valid.eq(1),
-                    self.l1i_wp.req.set.eq(addr.l1i.set),
-                    self.l1i_wp.req.way.eq(way),
-                    self.l1i_wp.req.line_data.eq(data),
-                    self.l1i_wp.req.tag_data.ppn.eq(addr.sv32.ppn),
-                    self.l1i_wp.req.tag_data.valid.eq(1),
-                ]
+            with m.Case(L1IMshrState.RUN):
                 m.d.sync += [
-                    self.port.resp.valid.eq(1),
-                    self.port.resp.ftq_idx.eq(ftq_idx),
-                    self.port.resp.way.eq(way),
-                    self.port.resp.src.eq(src),
-
-                    state.eq(L1IMshrState.NONE),
-                    addr.eq(0),
-                    way.eq(0),
-                    ftq_idx.eq(0),
-                    src.eq(L1IFillSource.NONE),
-                    r_ready.eq(1),
+                    self.stage[1].addr.eq(0),
+                    self.stage[1].blk.eq(0),
+                    self.stage[1].valid.eq(0),
                 ]
+                done = (self.r_blk == self.r_blocks)
+                with m.If(~done):
+                    next_blk = (self.r_blk + 1)
+                    next_addr = (self.r_addr.bits + self.p.l1i.line_bytes)
+                    m.d.sync += [
+                        self.r_blk.eq(next_blk),
+                        self.r_addr.eq(next_addr),
+                        self.stage[1].addr.eq(next_addr),
+                        self.stage[1].blk.eq(next_blk),
+                        self.stage[1].valid.eq(1),
+                    ]
 
+
+    def elaborate_s1(self, m: Module):
+        m.d.comb += [
+            self.fakeram.req.addr.eq(0),
+            self.fakeram.req.valid.eq(0),
+        ]
+        m.d.sync += [
+            self.stage[2].addr.eq(0),
+            self.stage[2].blk.eq(0),
+            self.stage[2].valid.eq(0),
+        ]
+
+        with m.If(self.stage[1].valid):
+            m.d.comb += [
+                self.fakeram.req.addr.eq(self.stage[1].addr),
+                self.fakeram.req.valid.eq(1),
+            ]
+            m.d.sync += [
+                self.stage[2].addr.eq(self.stage[1].addr),
+                self.stage[2].blk.eq(self.stage[1].blk),
+                self.stage[2].valid.eq(1),
+            ]
+
+    def elaborate_s2(self, m: Module):
+        m.d.sync += [
+            self.stage[3].addr.eq(0),
+            self.stage[3].blk.eq(0),
+            self.stage[3].valid.eq(0),
+            self.stage[3].data.eq(0),
+        ]
+
+        # FIXME: For now, we're *assuming* that a memory device will always
+        # reply on the cycle immediately following the request. 
+        with m.If(self.stage[2].valid):
+            m.d.sync += Assert(self.fakeram.resp.valid)
+
+        with m.If(self.stage[2].valid & self.fakeram.resp.valid):
+            m.d.sync += [
+                self.stage[3].addr.eq(self.stage[2].addr),
+                self.stage[3].blk.eq(self.stage[2].blk),
+                self.stage[3].valid.eq(self.stage[2].valid),
+                self.stage[3].data.eq(Cat(*self.fakeram.resp.data)),
+            ]
+
+    def elaborate_s3(self, m: Module):
+        m.d.comb += [
+            self.l1i_wp.req.valid.eq(0),
+            self.l1i_wp.req.set.eq(0),
+            self.l1i_wp.req.way.eq(0),
+            self.l1i_wp.req.line_data.eq(0),
+            self.l1i_wp.req.tag_data.eq(0),
+            self.l1i_wp.req.tag_data.valid.eq(0),
+        ]
+        with m.If(self.stage[3].valid):
+            m.d.comb += [
+                self.l1i_wp.req.valid.eq(1),
+                self.l1i_wp.req.set.eq(self.stage[3].addr.l1i.set),
+                self.l1i_wp.req.way.eq(self.r_way),
+                self.l1i_wp.req.line_data.eq(self.stage[3].data),
+                self.l1i_wp.req.tag_data.eq(self.stage[3].addr.sv32.ppn),
+                self.l1i_wp.req.tag_data.valid.eq(1),
+            ]
+
+        done = (self.stage[3].blk == self.r_blocks)
+        with m.If(done & self.stage[3].valid):
+            m.d.sync += [
+                self.r_state.eq(L1IMshrState.IDLE),
+                self.r_busy.eq(0),
+                self.r_base_addr.eq(0),
+                self.r_ftq_idx.eq(0),
+                self.r_way.eq(0),
+                self.r_blocks.eq(0),
+                self.r_src.eq(0),
+                self.r_blk.eq(0),
+                self.r_addr.eq(0),
+                self.port.resp.valid.eq(1),
+                self.port.resp.ftq_idx.eq(self.r_ftq_idx),
+                self.port.resp.way.eq(self.r_way),
+                self.port.resp.src.eq(self.r_src),
+            ]
+
+    def elaborate(self, platform):
+        m = Module()
+        self.elaborate_s0(m)
+        self.elaborate_s1(m)
+        self.elaborate_s2(m)
+        self.elaborate_s3(m)
         return m
-
 
 class NewL1IFillUnit(Component):
     def __init__(self, param: EmberParams):
@@ -347,6 +412,7 @@ class NewL1IFillUnit(Component):
                 req_out[idx].addr.eq(0),
                 req_out[idx].way.eq(0),
                 req_out[idx].ftq_idx.eq(0),
+                req_out[idx].blocks.eq(0),
                 resp_out[idx].valid.eq(0),
                 resp_out[idx].ftq_idx.eq(0),
                 resp_out[idx].src.eq(L1IFillSource.NONE),
@@ -362,6 +428,7 @@ class NewL1IFillUnit(Component):
                     req_out[mshr_idx].way.eq(req_in[idx].way),
                     req_out[mshr_idx].ftq_idx.eq(req_in[idx].ftq_idx),
                     req_out[mshr_idx].src.eq(req_in[idx].src),
+                    req_out[mshr_idx].blocks.eq(req_in[idx].blocks),
                 ]
 
         for idx in range(self.num_port):

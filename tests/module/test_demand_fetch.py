@@ -15,7 +15,7 @@ class DemandFetchUnitHarness(Component):
         self.p = param
         signature = Signature({
             "req": In(DemandFetchRequest(param)),
-            "fakeram": Out(FakeRamInterface(param.l1i.line_depth)),
+            "fakeram": Out(FakeRamInterface(param.l1i.line_depth)).array(2),
         })
         super().__init__(signature)
 
@@ -25,29 +25,50 @@ class DemandFetchUnitHarness(Component):
         m.submodules.dfu  = dfu  = DemandFetchUnit(self.p)
         m.submodules.l1i  = l1i  = L1ICache(self.p)
         m.submodules.itlb = itlb = L1ICacheTLB(self.p)
+        m.submodules.ifill = ifill = NewL1IFillUnit(self.p)
+        m.submodules.pdu = pdu = PredecodeUnit(self.p)
 
         connect(m, flipped(self.req), dfu.req)
         connect(m, dfu.l1i_rp, l1i.rp[0])
         connect(m, dfu.tlb_rp, itlb.rp)
+        connect(m, dfu.pd_req, pdu.req)
+
+        connect(m, dfu.ifill, ifill.port[0])
+        #connect(m, dfu.ifill_req, ifill.port[0].req)
+
+        connect(m, dfu.ifill_sts, ifill.sts)
+        connect(m, ifill.fakeram[0], flipped(self.fakeram[0]))
+        connect(m, ifill.fakeram[1], flipped(self.fakeram[1]))
+        connect(m, ifill.l1i_wp[0], l1i.wp[0])
+        connect(m, ifill.l1i_wp[1], l1i.wp[1])
 
         return m
 
 def tb_demand_fetch(dut: DemandFetchUnit):
-    ram = FakeRam(0x0000_1000)
-    for i in range(10):
-        yield dut.req.valid.eq(1)
-        yield dut.req.vaddr.eq(0x0000_1000)
-        yield dut.req.passthru.eq(1)
-        yield dut.req.blocks.eq(4)
+    ram = FakeRam(0x0001_0000)
+    for addr in range(0x1000, 0x2000, 4):
+        ram.write_word(addr, addr)
+
+    # Dummy [padding] cycle
+    yield Tick()
+
+    # Drive a demand request
+    yield dut.req.valid.eq(1)
+    yield dut.req.vaddr.eq(0x0000_1008)
+    yield dut.req.passthru.eq(1)
+    yield dut.req.blocks.eq(1)
+    yield Tick()
+    yield dut.req.valid.eq(0)
+    yield dut.req.vaddr.eq(0x0000_0000)
+    yield dut.req.passthru.eq(0)
+    yield dut.req.blocks.eq(0)
+
+    # Run the pipeline for a few cycles
+    for i in range(24):
+        yield from ram.run(dut.fakeram[0].req, dut.fakeram[0].resp)
+        yield from ram.run(dut.fakeram[1].req, dut.fakeram[1].resp, pipe=1)
         yield Tick()
-        yield from ram.run(dut.fakeram.req, dut.fakeram.resp)
 
-
-    #yield dut.alloc_req.valid.eq(0)
-    #yield dut.alloc_req.passthru.eq(0)
-    #yield dut.alloc_req.vaddr.eq(0)
-
-    #yield Tick()
 
 class DemandFetchTests(unittest.TestCase):
     def test_demand(self):

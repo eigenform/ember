@@ -81,16 +81,16 @@ class EmberFrontend(Component):
 
         # IFU connection to the decode queue
         # NOTE: The IFU response changes at clock edges
-        dq_entry = Signal(DecodeQueueEntry(self.p))
-        dq_credit = Signal(1)
-        m.d.comb += [
-            dq_entry.data.eq(ifu.result.data),
-            dq_entry.ftq_idx.eq(ifu.result.ftq_idx),
-            dq_credit.eq(ifu.result.valid),
-            self.dq_up.data[0].eq(dq_entry),
-            self.dq_up.credit.req.credit.eq(dq_credit),
-            self.dq_up.credit.req.valid.eq(dq_credit),
-        ]
+        #dq_entry = Signal(DecodeQueueEntry(self.p))
+        #dq_credit = Signal(1)
+        #m.d.comb += [
+        #    dq_entry.data.eq(ifu.result.data),
+        #    dq_entry.ftq_idx.eq(ifu.result.ftq_idx),
+        #    dq_credit.eq(ifu.result.valid),
+        #    self.dq_up.data[0].eq(dq_entry),
+        #    self.dq_up.credit.req.credit.eq(dq_credit),
+        #    self.dq_up.credit.req.valid.eq(dq_credit),
+        #]
 
         # PDU connections
         connect(m, pdu.resp, bpu.pd_resp)
@@ -156,7 +156,7 @@ class EmberCore(Component):
         m = Module()
 
         front = m.submodules.front = EmberFrontend(self.p)
-        dq = m.submodules.dq = DecodeQueue(self.p)
+        #dq = m.submodules.dq = DecodeQueue(self.p)
         midcore = m.submodules.midcore = EmberMidCore(self.p)
 
         # Connect frontend to memory interface
@@ -167,8 +167,8 @@ class EmberCore(Component):
         connect(m, flipped(self.dbg_cf_req), front.dbg_cf_req)
 
         # Connect decode queue to frontend/midcore
-        connect(m, front.dq_up, dq.up)
-        connect(m, dq.down, midcore.dq_down)
+        #connect(m, front.dq_up, dq.up)
+        #connect(m, dq.down, flipped(midcore.dq_down))
 
         return m
 

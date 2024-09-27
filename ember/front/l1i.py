@@ -256,6 +256,10 @@ class L1IWaySelect(Component):
             for way_idx in range(self.num_ways)
         )
         for way_idx in range(self.num_ways):
+            #m.d.sync += Print(Format(
+            #    "[waysel] i_tag={:b} way{}_tag={:b}",
+            #    self.i_tag.ppn.ppn0, way_idx, self.i_tags[way_idx].ppn.ppn0
+            #))
             m.d.comb += [
                 match_arr[way_idx].eq(
                     (self.i_tags[way_idx].valid) &

@@ -51,6 +51,9 @@ class L1ICacheParams(object):
         self.num_ways   = num_ways
         self.line_depth = line_depth
 
+        #self.way_idx_shape = unsigned(exact_log2(num_ways))
+        #self.set_idx_shape = unsigned(exact_log2(num_sets))
+
         # L1I cache line 
         self.line_bits    = self.word_width * self.line_depth
         self.line_bytes   = self.line_bits // 8

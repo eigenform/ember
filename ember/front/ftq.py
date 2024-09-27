@@ -170,7 +170,7 @@ class FetchTargetQueue(Component):
 
     def elaborate(self, platform):
         m = Module()
-        m.d.sync += Print("-----------------------------------------------")
+        #m.d.sync += Print("-----------------------------------------------")
 
         data_arr = Array(
             Signal(FTQEntry(self.p), name=f"data_arr{idx}") 
@@ -208,7 +208,7 @@ class FetchTargetQueue(Component):
         new_entry = data_arr[r_wptr]
         with m.If(alloc_ok):
             m.d.sync += [
-                Print(Format("Alloc FTQ: idx={}, vaddr={:08x}", r_wptr, self.alloc_req.vaddr.bits)),
+                #Print(Format("Alloc FTQ: idx={}, vaddr={:08x}", r_wptr, self.alloc_req.vaddr.bits)),
                 new_entry.vaddr.eq(self.alloc_req.vaddr),
                 new_entry.state.eq(FTQEntryState.NONE),
                 new_entry.passthru.eq(self.alloc_req.passthru),
@@ -375,11 +375,11 @@ class FetchTargetQueue(Component):
             w_ifu_entry.eq(ifu_entry)
         ]
         m.d.sync += [
-            Print(Format(
-                "Demand Fetch: idx={:02}, v={}, addr={:08x}, pref={}, state={}", 
-                w_ifu_entry.id, w_ifu_entry.valid, w_ifu_entry.vaddr.bits,
-                w_ifu_entry.prefetched, w_ifu_entry.state,
-            )),
+            #Print(Format(
+            #    "Demand Fetch: idx={:02}, v={}, addr={:08x}, pref={}, state={}", 
+            #    w_ifu_entry.id, w_ifu_entry.valid, w_ifu_entry.vaddr.bits,
+            #    w_ifu_entry.prefetched, w_ifu_entry.state,
+            #)),
         ]
 
         with m.If(w_ifu_entry.valid):

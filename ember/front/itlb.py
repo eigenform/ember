@@ -96,15 +96,14 @@ class L1ICacheTLB(Component):
     def elaborate(self, platform):
         m = Module()
 
-        # Generates a "random" index for allocations/evictions.
-        # FIXME: The tree-based PLRU is probably a more reasonable strategy.
+        # NOTE: Generates a "random" index for allocations/evictions.
+        # This is fine, for now. 
         lfsr_en = self.fill_req.valid
         m.submodules.lfsr = lfsr = \
             EnableInserter(lfsr_en)(LFSR(degree=ceil_log2(self.depth)))
         lfsr_out = lfsr.value
 
         # Tag and data arrays.
-        # FIXME: These are going be turned into a lot of flipflops..
         data_arr  = Array(
             Signal(PageTableEntrySv32(), name=f"data_arr{i}") 
             for i in range(self.depth)
