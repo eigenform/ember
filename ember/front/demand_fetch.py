@@ -437,7 +437,11 @@ class DemandFetchUnit(Component):
         # If this is the last block in the transaction, reset the pipeline
         # state (indicating that we're ready for a new transaction).
         last_blk = (req.blk == self.r_blocks)
-        with m.If(last_blk & (self.r_state == DemandFetchState.RUN)):
+        complete = (
+            (self.r_state == DemandFetchState.RUN) &
+            last_blk & ~self.r_stall & ~need_stall
+        )
+        with m.If(complete):
             m.d.sync += [
                 self.r_state.eq(DemandFetchState.IDLE),
                 self.r_pc.eq(0),
