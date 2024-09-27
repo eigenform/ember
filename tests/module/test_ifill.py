@@ -76,7 +76,7 @@ def tb_l1ifill_2(dut: L1IFillHarness):
             line = []
             for i in range(dut.p.l1i.line_depth):
                 j = yield dut.l1i_rp.resp.line_data[way_idx][i]
-                line.append(j)
+                line.append(unpack("<L", pack("<L", j))[0])
             if v == 1:
                 print(f"way {way_idx}: ", [ "{:08x}".format(x) for x in line ])
 
