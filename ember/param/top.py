@@ -73,6 +73,10 @@ class EmberParams:
         self.inst: RvInstGroup   = RV32I_BASE_SET
         self.mops: EmberMopGroup = DEFAULT_EMBER_MOPS
 
+        # Maximum size of a "fetch block" (number of sequential cachelines)
+        self.max_fblk_size = 16
+        self.fblk_size_shape = unsigned(exact_log2(self.max_fblk_size))
+
         # L1I cache parameters. 
         self.l1i = L1ICacheParams(self.rv,
             num_sets=32,

@@ -9,6 +9,51 @@ from ember.param.front import *
 from ember.uarch.addr import *
 from ember.uarch.mop import *
 
+class ResteerRequest(Signature):
+    def __init__(self, p: EmberParams):
+        super().__init__({
+            "valid": Out(1),
+            "op": Out(ControlFlowOp),
+            "src_pc": Out(p.vaddr),
+            "tgt_pc": Out(p.vaddr),
+            "parent_ftq_idx": Out(p.ftq.index_shape),
+            "parent_line": Out(p.fblk_size_shape),
+            "parent_idx": Out(p.l1i.word_idx_shape)
+        })
+
+
+
+class ControlFlowRequest(Signature):
+    """ A request to continue the instruction stream at some location.
+
+    Members
+    =======
+    valid:
+        This request is valid
+    pc:
+        The program counter indicating the next valid instruction 
+    blocks:
+        The number of sequential cachelines in this request
+
+    parent_ftq_idx:
+        The index of the FTQ entry that generated this request. 
+    parent_line:
+        Cacheline index in the parent fetch block which caused this request.
+    parent_idx:
+        Word index into the parent cacheline which caused this request. 
+
+    """
+    def __init__(self, p: EmberParams):
+        super().__init__({
+            "valid": Out(1),
+            "pc": Out(p.vaddr),
+            "op": Out(ControlFlowOp),
+            "blocks": Out(p.fblk_size_shape),
+            "parent_ftq_idx": Out(p.ftq.index_shape),
+            "parent_line": Out(p.fblk_size_shape),
+            "parent_idx": Out(p.l1i.word_idx_shape)
+        })
+
 
 class L1ICacheline(ArrayLayout):
     def __init__(self, p: EmberParams):
@@ -64,7 +109,7 @@ class FTQEntry(StructLayout):
     valid:
         Indicates when an entry is valid
     blocks:
-        Number of sequential fetch blocks
+        Number of sequential cachelines in this fetch block
     prefetched:
         Indicates when an entry has been prefetched into the L1I cache
     complete:
@@ -79,7 +124,7 @@ class FTQEntry(StructLayout):
         super().__init__({
             "vaddr": param.vaddr,
             "state": FTQEntryState,
-            "blocks": unsigned(4),
+            "blocks": param.fblk_size_shape,
             "valid": unsigned(1),
             "prefetched": unsigned(1),
             "complete": unsigned(1),
@@ -106,6 +151,11 @@ class DecodeQueueEntry(StructLayout):
             "ftq_idx": p.ftq.index_shape,
         })
 
+class DemandResponseStatus(Enum, shape=2):
+    NONE = 0
+    OK = 1
+    CANCEL = 2
+    RESTEER = 3
 
 class FetchResponseStatus(Enum, shape=2):
     """ Status of a fetch request that has passed through the IFU. 
@@ -172,7 +222,7 @@ class FetchResponse(Signature):
         })
 
 class FetchData(Signature):
-    """ Response data associated with an instruction fetch request. 
+    """ Response data associated with a demand fetch request. 
 
     Members
     =======
@@ -192,6 +242,7 @@ class FetchData(Signature):
             "vaddr": Out(p.vaddr),
             "ftq_idx": Out(p.ftq.index_shape),
             "data": Out(L1ICacheline(p)),
+            "mask": Out(p.l1i.line_depth),
         })
 
 
@@ -240,6 +291,7 @@ class PrefetchRequest(Signature):
             "passthru": Out(1),
             "ftq_idx": Out(param.ftq.index_shape),
             "vaddr": Out(param.vaddr),
+            "blocks": Out(param.fblk_size_shape),
         })
 
 class PrefetchResponse(Signature):
@@ -289,6 +341,7 @@ class PredecodeInfo(StructLayout):
 
     """
     def __init__(self, vaddr: VirtualAddress):
+        self.__vaddr = vaddr
         super().__init__({
             "ill": unsigned(1),
             "is_cf": unsigned(1),
@@ -299,5 +352,33 @@ class PredecodeInfo(StructLayout):
             "tgt": vaddr,
             "tgt_valid": unsigned(1),
         })
+    def __call__(self, value):
+        return PredecodeInfoView(self.__vaddr, value)
+
+
+class PredecodeInfoView(View):
+    def __init__(self, vaddr: VirtualAddress, target):
+        super().__init__(PredecodeInfo(vaddr), target)
+    
+    def is_direct(self):
+        return (
+            (self.cf_op == ControlFlowOp.CALL_DIR) |
+            (self.cf_op == ControlFlowOp.JUMP_DIR) |
+            (self.cf_op == ControlFlowOp.BRANCH)
+        )
+
+    def is_indirect(self):
+        return (
+            (self.cf_op == ControlFlowOp.CALL_IND) |
+            (self.cf_op == ControlFlowOp.JUMP_IND) |
+            (self.cf_op == ControlFlowOp.RET)
+        )
+
+    def resteerable(self):
+        return (
+            (self.cf_op == ControlFlowOp.CALL_DIR) |
+            (self.cf_op == ControlFlowOp.JUMP_DIR) |
+            (self.cf_op == ControlFlowOp.RET)
+        )
 
 

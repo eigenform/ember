@@ -11,6 +11,7 @@ from ember.param import *
 from ember.uarch.front import *
 
 from ember.front.fetch import *
+from ember.front.demand_fetch import *
 from ember.front.l1i import *
 from ember.front.itlb import *
 from ember.front.ftq import *
@@ -44,7 +45,7 @@ class EmberFrontend(Component):
             "fakeram": Out(FakeRamInterface(param.l1i.line_depth)).array(2),
             "dq_up": Out(CreditQueueUpstream(1, DecodeQueueEntry(param))),
             "dbg_cf_req": In(ControlFlowRequest(param)),
-            "dbg_fetch_resp": Out(FetchResponse(param)),
+            "dbg_fetch_resp": Out(DemandFetchResponse(param)),
         })
         super().__init__(signature)
 
@@ -54,13 +55,13 @@ class EmberFrontend(Component):
         clk_ctr = Signal(8, init=0)
         m.d.sync += clk_ctr.eq(clk_ctr + 1)
 
-        bpu   = m.submodules.bpu   = BranchPredictionUnit(self.p)
+        #bpu   = m.submodules.bpu   = BranchPredictionUnit(self.p)
         cfc   = m.submodules.cfc   = ControlFlowController(self.p)
         ftq   = m.submodules.ftq   = FetchTargetQueue(self.p)
-        ifu   = m.submodules.ifu   = FetchUnit(self.p)
+        #ifu   = m.submodules.ifu   = FetchUnit(self.p)
+        dfu   = m.submodules.dfu   = DemandFetchUnit(self.p)
         l1i   = m.submodules.l1i   = L1ICache(self.p)
         itlb  = m.submodules.itlb  = L1ICacheTLB(self.p)
-        #ifill = m.submodules.ifill = L1IFillUnit(self.p)
         ifill = m.submodules.ifill = NewL1IFillUnit(self.p)
         pfu   = m.submodules.pfu   = L1IPrefetchUnit(self.p)
         pdu   = m.submodules.pdu   = PredecodeUnit(self.p)
@@ -72,12 +73,30 @@ class EmberFrontend(Component):
         #connect(m, bpu.cf_req, cfc.bpu)
 
         # IFU connections
-        connect(m, ifu.l1i_rp, l1i.rp[0])
-        connect(m, ifu.tlb_rp, itlb.rp)
-        connect(m, ifu.ifill_req, ifill.port[0].req)
-        connect(m, ifu.ifill_sts, ifill.sts)
-        connect(m, ifu.pd_req, pdu.req)
-        connect(m, ifu.resp, flipped(self.dbg_fetch_resp))
+        #connect(m, ifu.l1i_rp, l1i.rp[0])
+        #connect(m, ifu.tlb_rp, itlb.rp)
+        #connect(m, ifu.ifill_req, ifill.port[0].req)
+        #connect(m, ifu.ifill_sts, ifill.sts)
+        #connect(m, ifu.pd_req, pdu.req)
+        #connect(m, ifu.resp, flipped(self.dbg_fetch_resp))
+
+        # DFU connections
+        connect(m, dfu.l1i_rp, l1i.rp[0])
+        connect(m, dfu.tlb_rp, itlb.rp)
+        connect(m, dfu.ifill, ifill.port[0])
+        connect(m, dfu.ifill_sts, ifill.sts)
+        connect(m, dfu.resp, flipped(self.dbg_fetch_resp))
+        connect(m, dfu.resteer_req, cfc.resteer_req)
+
+        #with m.If(dfu.result.valid):
+        #    cl = Signal(L1ICacheline(self.p))
+        #    m.d.comb += cl.eq(dfu.result.data)
+        #    m.d.sync += Print(Format(
+        #        "Fetched {:08x}: {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x}", 
+        #        dfu.result.vaddr.bits, cl[0], cl[1], cl[2], cl[3], cl[4], cl[5], cl[6], cl[7],
+        #    ))
+
+
 
         # IFU connection to the decode queue
         # NOTE: The IFU response changes at clock edges
@@ -93,7 +112,7 @@ class EmberFrontend(Component):
         #]
 
         # PDU connections
-        connect(m, pdu.resp, bpu.pd_resp)
+        #connect(m, pdu.resp, bpu.pd_resp)
 
         # PFU connections
         connect(m, pfu.l1i_pp, l1i.pp[0])
@@ -101,13 +120,12 @@ class EmberFrontend(Component):
         connect(m, pfu.ifill_req, ifill.port[1].req)
         connect(m, pfu.ifill_sts, ifill.sts)
 
-        # IFU connections
-        connect(m, ifill.port[0].resp, ftq.ifill_resp[0])
-        connect(m, ifill.port[1].resp, ftq.ifill_resp[1])
+        #connect(m, ifill.port[0].resp, ftq.ifill_resp[0])
+        #connect(m, ifill.port[1].resp, ftq.ifill_resp[1])
 
         # FTQ connections
-        connect(m, ftq.fetch_req, ifu.req)
-        connect(m, ftq.fetch_resp, ifu.resp)
+        connect(m, ftq.fetch_req, dfu.req)
+        connect(m, ftq.fetch_resp, dfu.resp)
         connect(m, ftq.prefetch_req, pfu.req)
         connect(m, ftq.prefetch_resp, pfu.resp)
         connect(m, ftq.prefetch_sts, pfu.sts)

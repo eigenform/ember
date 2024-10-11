@@ -3,6 +3,7 @@ from ember.param import *
 from ember.sim.common import Testbench
 from ember.sim.fakeram import *
 from ember.front.demand_fetch import *
+from ember.front.demand_fetch import DemandFetchRequest
 from ember.uarch.front import *
 
 from amaranth import *
@@ -26,12 +27,12 @@ class DemandFetchUnitHarness(Component):
         m.submodules.l1i  = l1i  = L1ICache(self.p)
         m.submodules.itlb = itlb = L1ICacheTLB(self.p)
         m.submodules.ifill = ifill = NewL1IFillUnit(self.p)
-        m.submodules.pdu = pdu = PredecodeUnit(self.p)
+        #m.submodules.pdu = pdu = PredecodeUnit(self.p)
 
         connect(m, flipped(self.req), dfu.req)
         connect(m, dfu.l1i_rp, l1i.rp[0])
         connect(m, dfu.tlb_rp, itlb.rp)
-        connect(m, dfu.pd_req, pdu.req)
+        #connect(m, dfu.pd_req, pdu.req)
 
         connect(m, dfu.ifill, ifill.port[0])
         #connect(m, dfu.ifill_req, ifill.port[0].req)
@@ -56,12 +57,12 @@ def tb_demand_fetch(dut: DemandFetchUnit):
     yield dut.req.valid.eq(1)
     yield dut.req.vaddr.eq(0x0000_1008)
     yield dut.req.passthru.eq(1)
-    yield dut.req.blocks.eq(1)
+    yield dut.req.lines.eq(1)
     yield Tick()
     yield dut.req.valid.eq(0)
     yield dut.req.vaddr.eq(0x0000_0000)
     yield dut.req.passthru.eq(0)
-    yield dut.req.blocks.eq(0)
+    yield dut.req.lines.eq(0)
 
     # Run the pipeline for a few cycles
     for i in range(24):

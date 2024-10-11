@@ -7,7 +7,7 @@ from amaranth.lib.enum import *
 from ember.riscv.inst import *
 from ember.riscv.encoding import *
 
-class DestOperand(Flag):
+class DestOperand(Flag, shape=4):
     """ Destination operand types
 
     Values
@@ -29,7 +29,7 @@ class DestOperand(Flag):
     CSR  = 0b0100
     PC   = 0b1000
 
-class SourceOperand(Enum):
+class SourceOperand(Enum, shape=4):
     """ Source operand types
 
     Values
@@ -51,7 +51,7 @@ class SourceOperand(Enum):
     IMM  = 0b0100
     PC   = 0b1000
 
-class AluOp(Enum):
+class AluOp(Enum, shape=4):
     """ ALU operations
 
     Values
@@ -91,7 +91,7 @@ class AluOp(Enum):
     SRL  = 0b1010
     SRA  = 0b1011
 
-class BrnOp(Enum):
+class BrnOp(Enum, shape=3):
     """ Branch operations
 
     Values
@@ -119,7 +119,7 @@ class BrnOp(Enum):
     LTU  = 0b101
     GEU  = 0b110
 
-class LoadOp(Enum):
+class LoadOp(Enum, shape=3):
     """ Load operation
 
     Values
@@ -144,7 +144,7 @@ class LoadOp(Enum):
     BU   = 4 
     HU   = 5 
 
-class StoreOp(Enum):
+class StoreOp(Enum, shape=2):
     """ Store operation
 
     Values
@@ -163,7 +163,7 @@ class StoreOp(Enum):
     H = 2
     W = 3
 
-class SysOp(Enum):
+class SysOp(Enum, shape=3):
     NONE   = 0
     FENCE  = 1
     ECALL  = 2
@@ -172,19 +172,19 @@ class SysOp(Enum):
     CSRRS  = 5
     CSRRC  = 6
 
-class JmpOp(Enum):
+class JmpOp(Enum, shape=2):
     NONE = 0b00
     JAL  = 0b01
     JALR = 0b10
 
-class ControlFlowOp(Enum):
-    NONE     = 0
-    BRANCH   = 1
-    JUMP_DIR = 2
-    JUMP_IND = 3
-    CALL_DIR = 4
-    CALL_IND = 5
-    RET      = 6
+class ControlFlowOp(Enum, shape=3):
+    NONE     = 0b000
+    BRANCH   = 0b001
+    JUMP_DIR = 0b010
+    JUMP_IND = 0b011
+    CALL_DIR = 0b100
+    CALL_IND = 0b101
+    RET      = 0b111
 
 class EmberMop(object):
     """ Control signals associated with a macro-op. 

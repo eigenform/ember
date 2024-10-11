@@ -18,6 +18,21 @@ from ember.common.mem import *
 from ember.common.coding import *
 from ember.common.xbar import *
 
+class Offset2BitmaskHarness(Component):
+    def __init__(self, off_width: int, mask_width: int):
+        self.off_width = off_width
+        self.mask_width = mask_width
+        super().__init__({
+            "idx": In(off_width),
+            "mask_off": Out(mask_width),
+            "mask_lim": Out(mask_width),
+        })
+    def elaborate(self, platform):
+        m = Module()
+        m.d.comb += self.mask_off.eq(offset2masklut(8, self.idx))
+        m.d.comb += self.mask_lim.eq(limit2masklut(8, self.idx))
+        return m
+
 class CommonUnitTests(unittest.TestCase):
     @staticmethod
     def simulate_comb(m):
@@ -217,6 +232,44 @@ class CommonUnitTests(unittest.TestCase):
             v = yield dut.grant[1]
             assert s == 1
             assert v == 1
+
+    def test_offset2bitmask(self):
+        dut = Offset2BitmaskHarness(off_width=5, mask_width=8)
+
+        @self.simulate_comb(dut)
+        def _1():
+
+            off_results = []
+            lim_results = []
+            for off in range(0, 0x20, 4):
+                yield dut.idx.eq(off >> 2)
+                mask_off = yield dut.mask_off
+                mask_lim = yield dut.mask_lim
+                off_results.append((off, mask_off))
+                lim_results.append((off, mask_lim))
+                print("{:02x} {:08b}".format(off, mask_lim))
+
+            assert off_results == [
+                (0x00, 0b1111_1111),
+                (0x04, 0b1111_1110),
+                (0x08, 0b1111_1100),
+                (0x0c, 0b1111_1000),
+                (0x10, 0b1111_0000),
+                (0x14, 0b1110_0000),
+                (0x18, 0b1100_0000),
+                (0x1c, 0b1000_0000),
+            ]
+            assert lim_results == [
+                (0x00, 0b0000_0001),
+                (0x04, 0b0000_0011),
+                (0x08, 0b0000_0111),
+                (0x0c, 0b0000_1111),
+                (0x10, 0b0001_1111),
+                (0x14, 0b0011_1111),
+                (0x18, 0b0111_1111),
+                (0x1c, 0b1111_1111),
+            ]
+
 
 
 

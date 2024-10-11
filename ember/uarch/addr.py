@@ -86,6 +86,7 @@ class VirtualAddress(FlexibleLayout):
         Layout used to access the L1I cache
     """
     def __init__(self, l1i_line_bytes: int, l1i_num_sets: int):
+        self.num_line_bytes = l1i_line_bytes
         self.num_off_bits = exact_log2(l1i_line_bytes)
         self.num_blk_bits = 32 - self.num_off_bits
         super().__init__(32, {
@@ -102,8 +103,9 @@ class VirtualAddress(FlexibleLayout):
 
 class VirtualAddressView(View):
     """ View associated with a virtual address. """
-    def __init__(self, layout, target):
+    def __init__(self, layout: VirtualAddress, target):
         assert isinstance(layout, VirtualAddress)
+        self.num_line_bytes = layout.num_line_bytes
         self.num_off_bits = layout.num_off_bits
         self.num_blk_bits = layout.num_blk_bits
         super().__init__(layout, target)

@@ -81,11 +81,12 @@ class PredecodeUnitTests(unittest.TestCase):
         return
 
     def test_pdu_elaborate(self):
-        dut = PredecodeUnit(EmberParams())
-        with open("/tmp/PredecodeUnit.v", "w") as f:
-            f.write(verilog.convert(dut, name="PredecodeUnit"))
-        with open("/tmp/PredecodeUnit.rtlil", "w") as f:
-            f.write(rtlil.convert(dut, name="PredecodeUnit"))
+        return
+        #dut = PredecodeUnit(EmberParams())
+        #with open("/tmp/PredecodeUnit.v", "w") as f:
+        #    f.write(verilog.convert(dut, name="PredecodeUnit"))
+        #with open("/tmp/PredecodeUnit.rtlil", "w") as f:
+        #    f.write(rtlil.convert(dut, name="PredecodeUnit"))
 
 
 

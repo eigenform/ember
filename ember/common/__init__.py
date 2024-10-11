@@ -2,7 +2,7 @@
 import functools
 import operator
 import itertools
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Optional
 import typing
 from math import floor
 #from collections.abc import Iterable
@@ -13,6 +13,54 @@ from amaranth import *
 from amaranth.lib.wiring import *
 from amaranth.lib.data import *
 from amaranth.utils import ceil_log2, exact_log2
+
+def reverse_bits(val: Value):
+    """ Reverse all of the bits in the provided 'Value' 
+
+    For example, `0b0101` becomes `0b1010`. 
+    """
+    rev = [ val[idx] for idx in reversed(range(len(val))) ]
+    return Cat(*rev)
+
+def offset2masklut(mask_width: int, off: Value):
+    """ Given a bit index 'off', yields a bitmask where all of the bits in 
+    the range `[off:mask_width-1]` (inclusive) are set. 
+    For example (where `mask_width` is 8):
+
+    - 0 yields `0b1111_1111`
+    - 1 yields `0b1111_1110`
+    - 2 yields `0b1111_1100`
+    - 3 yields `0b1111_1000`
+    """
+    def fill(x): 
+        res = (1 << mask_width)-1
+        for v in range(x): res ^= (1<<v)
+        return res
+    assert len(off) >= exact_log2(mask_width), \
+        "{} != {}".format(len(off), exact_log2(mask_width))
+    arr = Array([ C(fill(n), mask_width) for n in range(mask_width) ])
+    return arr[off]
+
+def limit2masklut(mask_width: int, lim: Value):
+    """ Given a bit index 'lim', yields a bitmask where all of the bits in
+    the range `[0:lim]` (inclusive) are set. 
+    For example (where `mask_width` is 8):
+
+    - 0 yields `0b0000_0001`
+    - 1 yields `0b0000_0011`
+    - 2 yields `0b0000_0111`
+    - 3 yields `0b0000_1111`
+    """
+    def fill(x): 
+        res = 0
+        for v in range(x): res |= (1<<v)
+        return res
+    assert len(lim) >= exact_log2(mask_width), \
+        "{} != {}".format(len(lim), exact_log2(mask_width))
+    arr = Array([ C(fill(n), mask_width) for n in range(1, mask_width+1) ])
+    return arr[lim]
+
+
 
 
 def popcount(x: Value) -> Value:

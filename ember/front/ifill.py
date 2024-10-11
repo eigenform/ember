@@ -57,7 +57,7 @@ class L1IFillPort(Signature):
             super().__init__({
                 "valid": Out(1),
                 "addr": Out(p.paddr),
-                "blocks": Out(4),
+                "blocks": Out(p.fblk_size_shape),
                 "way": Out(ceil_log2(p.l1i.num_ways)),
                 "ftq_idx": Out(p.ftq.index_shape),
                 "src": Out(L1IFillSource)
@@ -121,10 +121,18 @@ class L1IMissStatusHoldingRegister(Component):
     the L1I cache. An MSHR holds the request while data is being received 
     from memory and written back to the L1I cache data/tag arrays. 
 
+    An MSHR involves *pipelined* interactions with the L1I cache and 
+    memory interface. Ideally, this allows data from an external memory
+    to be streamed into the L1I cache. 
+
     An MSHR moves through the following sequence of states:
 
     - ``L1IMshrState.IDLE``: Ready to accept a request
     - ``L1IMshrState.RUN``: Request is registered and being sent to memory
+
+    .. warning::
+        Currently, this module does *not* handle requests to memory that 
+        cannot be completed in a single cycle. 
 
     Ports
     =====
@@ -149,7 +157,7 @@ class L1IMissStatusHoldingRegister(Component):
         self.r_base_addr = Signal(self.p.paddr)
         self.r_ftq_idx   = Signal(self.p.ftq.index_shape)
         self.r_way       = Signal(ceil_log2(self.p.l1i.num_ways))
-        self.r_blocks    = Signal(4)
+        self.r_blocks    = Signal(self.p.fblk_size_shape)
         self.r_src       = Signal(L1IFillSource)
         self.r_blk  = Signal(4)
         self.r_addr = Signal(self.p.paddr)
@@ -350,6 +358,8 @@ class NewL1IFillUnit(Component):
             mshr.append(x)
 
         # Connect MSHRs to resources
+        # FIXME: This simply *assumes* that the L1I cache and memory interface
+        # have multiple ports
         for idx in range(self.num_mshr):
             connect(m, mshr[idx].l1i_wp, flipped(self.l1i_wp[idx]))
             connect(m, mshr[idx].fakeram, flipped(self.fakeram[idx]))

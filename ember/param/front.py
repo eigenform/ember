@@ -51,6 +51,8 @@ class L1ICacheParams(object):
         self.num_ways   = num_ways
         self.line_depth = line_depth
 
+        self.word_idx_shape = unsigned(exact_log2(line_depth))
+
         #self.way_idx_shape = unsigned(exact_log2(num_ways))
         #self.set_idx_shape = unsigned(exact_log2(num_sets))
 

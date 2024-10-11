@@ -12,6 +12,7 @@ from amaranth.back import verilog, rtlil
 
 
 def tb_core_simple(dut: EmberCore):
+    print()
     ram = FakeRam(0x0000_1000)
     with open("./rv32/branches.bin", "rb") as f:
         data = bytearray(f.read())
@@ -33,11 +34,6 @@ def tb_core_simple(dut: EmberCore):
         yield from ram.run(dut.fakeram[0].req, dut.fakeram[0].resp)
         yield from ram.run(dut.fakeram[1].req, dut.fakeram[1].resp, pipe=1)
         cyc += 1
-
-    yield Tick()
-    yield Tick()
-    yield Tick()
-    yield Tick()
 
 
 class EmberCoreTests(unittest.TestCase):

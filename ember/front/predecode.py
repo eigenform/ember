@@ -23,7 +23,7 @@ class PredecodeRequest(Signature):
     vaddr:
         The *program counter* associated with this request
     ftq_idx:
-        The FTX index associated with this request
+        The FTQ index associated with this request
     cline:
         L1I cacheline data
     way:
@@ -34,7 +34,9 @@ class PredecodeRequest(Signature):
         super().__init__({
             "valid": Out(1),
             "vaddr": Out(p.vaddr),
+            "mask": Out(p.l1i.line_depth),
             "ftq_idx": Out(p.ftq.index_shape),
+            "line": Out(p.fblk_size_shape),
             "cline": Out(L1ICacheline(p)),
             "way": Out(exact_log2(p.l1i.num_ways)),
         })
@@ -61,6 +63,7 @@ class PredecodeResponse(Signature):
             "valid": Out(1),
             "vaddr": Out(p.vaddr),
             "ftq_idx": Out(p.ftq.index_shape),
+            "line": Out(p.fblk_size_shape),
             "info": Out(PredecodeInfo(p.vaddr)).array(p.l1i.line_depth),
             "info_valid": Out(1).array(p.l1i.line_depth),
         })
@@ -253,29 +256,33 @@ class PredecodeUnit(Component):
         # the appropriate program counter value for the word
         for idx in range(self.width):
             word_pc = Cat(C(idx*4, 5), self.req.vaddr.fetch_blk)
-            with m.If(idx >= start_idx):
+            word_valid = (self.req.mask[idx] & self.req.valid)
+            with m.If(self.req.mask[idx] & self.req.valid):
                 m.d.comb += pd[idx].pc.eq(word_pc)
                 m.d.comb += pd[idx].inst.eq(self.req.cline[idx])
-                m.d.comb += pd[idx].inst_valid.eq(1)
+                m.d.comb += pd[idx].inst_valid.eq(word_valid)
             with m.Else():
                 m.d.comb += pd[idx].pc.eq(0)
                 m.d.comb += pd[idx].inst.eq(0)
                 m.d.comb += pd[idx].inst_valid.eq(0)
 
         # Capture output from the predecoders. 
-        # Output response is available on the next cycle. 
         for idx in range(self.width):
-            m.d.sync += [
+            m.d.comb += [
                 self.resp.info_valid[idx].eq(info_valid[idx]),
                 self.resp.info[idx].ill.eq(info[idx].ill),
                 self.resp.info[idx].cf_op.eq(info[idx].cf_op),
+                self.resp.info[idx].is_cf.eq(info[idx].is_cf),
                 self.resp.info[idx].rd.eq(info[idx].rd),
                 self.resp.info[idx].rs1.eq(info[idx].rs1),
                 self.resp.info[idx].imm.eq(info[idx].imm),
+                self.resp.info[idx].tgt.eq(info[idx].tgt),
+                self.resp.info[idx].tgt_valid.eq(info[idx].tgt_valid),
             ]
-        m.d.sync += [
+        m.d.comb += [
             self.resp.valid.eq(self.req.valid),
             self.resp.vaddr.eq(self.req.vaddr),
+            self.resp.line.eq(self.req.line),
             self.resp.ftq_idx.eq(self.req.ftq_idx),
         ]
 
